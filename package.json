@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "bin": {
     "formstack-documents": "dist/cli.js",
+    "formstack-documents-mcp": "dist/mcp.js",
     "webmerge": "dist/cli.js"
   },
   "scripts": {
@@ -13,6 +14,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "cli": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "keywords": [
@@ -26,6 +28,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^14.0.2",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

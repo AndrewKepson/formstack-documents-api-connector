@@ -10,6 +10,8 @@ The initial route surface is limited to non-destructive actions:
 
 Create, update, copy, delete, delivery creation, and merge-triggering endpoints are intentionally not exposed by the Express app yet.
 
+The MCP server follows the same boundary: it exposes no destructive account actions, and any non-read-only file-processing tool requires explicit user verification before the API call is made.
+
 ## Install
 
 ```bash
@@ -93,6 +95,75 @@ Tool commands take JSON payloads and can write binary output:
 formstack-documents tools convert-to-pdf \
   --payload '{"file":{"name":"contract.docx","url":"https://example.com/contract.docx"}}' \
   --out contract.pdf
+```
+
+## MCP Server
+
+Build the project, then run the stdio MCP server:
+
+```bash
+pnpm run build
+formstack-documents-mcp
+```
+
+Local development:
+
+```bash
+pnpm run mcp
+```
+
+Example MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "formstack-documents": {
+      "command": "formstack-documents-mcp",
+      "env": {
+        "WEBMERGE_API_KEY": "your-key",
+        "WEBMERGE_API_SECRET": "your-secret"
+      }
+    }
+  }
+}
+```
+
+Read-only MCP tools:
+
+```text
+list_documents
+get_document
+get_document_fields
+get_document_file
+get_document_deliveries
+list_routes
+get_route
+get_route_fields
+get_route_rules
+get_route_deliveries
+```
+
+Non-read-only MCP tools require `confirmed: true` and `verificationNote`:
+
+```text
+combine_files
+convert_to_pdf
+compress_pdf
+encrypt_pdf
+split_pdf
+```
+
+Example verified tool payload:
+
+```json
+{
+  "file": {
+    "name": "contract.docx",
+    "url": "https://example.com/contract.docx"
+  },
+  "confirmed": true,
+  "verificationNote": "User approved converting this file to PDF."
+}
 ```
 
 ## SDK
