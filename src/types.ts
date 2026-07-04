@@ -45,6 +45,31 @@ export interface DocumentFieldsParams {
   attributes?: boolean | 0 | 1;
 }
 
+export interface CreateDocumentRequest {
+  name: string;
+  type: DocumentType;
+  output: DocumentOutput;
+  folder?: string;
+  output_name?: string;
+  file_contents?: string;
+  file_url?: string;
+  html?: string;
+  settings?: Record<string, unknown>;
+  [property: string]: unknown;
+}
+
+export interface UpdateDocumentRequest {
+  name?: string;
+  output?: DocumentOutput;
+  folder?: string;
+  output_name?: string;
+  file_contents?: string;
+  file_url?: string;
+  html?: string;
+  settings?: Record<string, unknown>;
+  [property: string]: unknown;
+}
+
 export interface WebmergeDocumentFile {
   type: DocumentType | string;
   last_update: string;

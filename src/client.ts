@@ -2,11 +2,13 @@ import { CredentialsError, WebmergeApiError } from "./errors.js";
 import type {
   BinaryResponse,
   CombineFilesRequest,
+  CreateDocumentRequest,
   DocumentFieldsParams,
   DocumentListParams,
   EncryptPdfRequest,
   SingleFileToolRequest,
   SplitPdfRequest,
+  UpdateDocumentRequest,
   WebmergeClientOptions,
   WebmergeCredentials,
   WebmergeDelivery,
@@ -23,6 +25,7 @@ const DEFAULT_BASE_URL = "https://www.webmerge.me";
 type RequestOptions = {
   query?: Record<string, unknown>;
   body?: unknown;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   authenticated?: boolean;
 };
 
@@ -47,6 +50,20 @@ export class WebmergeClient {
 
   getDocument(id: WebmergeId): Promise<WebmergeDocument> {
     return this.requestJson<WebmergeDocument>(`/api/documents/${encodeURIComponent(String(id))}`);
+  }
+
+  createDocument(payload: CreateDocumentRequest): Promise<WebmergeDocument> {
+    return this.requestJson<WebmergeDocument>("/api/documents", {
+      method: "POST",
+      body: payload
+    });
+  }
+
+  updateDocument(id: WebmergeId, payload: UpdateDocumentRequest): Promise<WebmergeDocument> {
+    return this.requestJson<WebmergeDocument>(`/api/documents/${encodeURIComponent(String(id))}`, {
+      method: "PUT",
+      body: payload
+    });
   }
 
   getDocumentFields(id: WebmergeId, params: DocumentFieldsParams = {}): Promise<WebmergeField[]> {
@@ -156,7 +173,7 @@ export class WebmergeClient {
     }
 
     const response = await this.fetchImpl(url, {
-      method: options.body === undefined ? "GET" : "POST",
+      method: options.method ?? (options.body === undefined ? "GET" : "POST"),
       headers,
       body
     });
