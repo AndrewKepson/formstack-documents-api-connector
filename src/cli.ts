@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 import "dotenv/config";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { Command, Option } from "commander";
 import { WebmergeClient } from "./client.js";
-import type { BinaryResponse, WebmergeClientOptions } from "./types.js";
+import type {
+  BinaryResponse,
+  CreateDocumentRequest,
+  UpdateDocumentRequest,
+  WebmergeClientOptions,
+  WebmergeDocumentFile
+} from "./types.js";
 
 function clientFromOptions(options: Record<string, string | undefined>): WebmergeClient {
   const clientOptions: WebmergeClientOptions = {
@@ -33,6 +39,31 @@ function parseJson<T>(json: string): T {
   return JSON.parse(json) as T;
 }
 
+async function readJsonPayload<T>(payload?: string, payloadFile?: string): Promise<T> {
+  if ((payload && payloadFile) || (!payload && !payloadFile)) {
+    throw new Error("Provide exactly one of --payload or --payload-file.");
+  }
+
+  const json = payloadFile ? await readFile(payloadFile, "utf8") : payload;
+  return parseJson<T>(json ?? "");
+}
+
+async function writeDocumentFile(result: WebmergeDocumentFile, output?: string): Promise<void> {
+  if (!output) {
+    printJson(result);
+    return;
+  }
+
+  const body = Buffer.from(result.contents, "base64");
+  await writeFile(output, body);
+  printJson({
+    output,
+    type: result.type,
+    last_update: result.last_update,
+    bytes: body.length
+  });
+}
+
 const program = new Command();
 
 program
@@ -43,7 +74,7 @@ program
   .addOption(new Option("--secret <secret>", "API secret").env("WEBMERGE_API_SECRET"))
   .addOption(new Option("--base-url <url>", "Base URL").env("WEBMERGE_BASE_URL").default("https://www.webmerge.me"));
 
-const documents = program.command("documents").description("Read document templates");
+const documents = program.command("documents").description("Manage document templates");
 
 documents
   .command("list")
@@ -71,8 +102,31 @@ documents
 documents
   .command("file")
   .argument("<id>", "Document ID")
-  .action(async (id) => {
-    printJson(await clientFromOptions(program.opts()).getDocumentFile(id));
+  .option("--out <file>", "Decode base64 file contents and write the uploaded file to disk")
+  .action(async (id, options) => {
+    const result = await clientFromOptions(program.opts()).getDocumentFile(id);
+    await writeDocumentFile(result, options.out);
+  });
+
+documents
+  .command("create")
+  .description("Create a document template. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON create payload")
+  .option("--payload-file <file>", "Read JSON create payload from a file")
+  .action(async (options) => {
+    const payload = await readJsonPayload<CreateDocumentRequest>(options.payload, options.payloadFile);
+    printJson(await clientFromOptions(program.opts()).createDocument(payload));
+  });
+
+documents
+  .command("update")
+  .argument("<id>", "Document ID")
+  .description("Update a document template. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON update payload")
+  .option("--payload-file <file>", "Read JSON update payload from a file")
+  .action(async (id, options) => {
+    const payload = await readJsonPayload<UpdateDocumentRequest>(options.payload, options.payloadFile);
+    printJson(await clientFromOptions(program.opts()).updateDocument(id, payload));
   });
 
 documents

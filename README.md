@@ -2,7 +2,7 @@
 
 Type-safe Node, Express, and CLI connector for the Formstack Documents API, formerly Webmerge.
 
-The initial route surface is limited to non-destructive actions:
+The initial Express and MCP route surface is limited to non-destructive actions:
 
 - Documents: list, get, fields, source file metadata/content, deliveries.
 - Data Routes: list, get, fields, rules, deliveries.
@@ -96,6 +96,38 @@ formstack-documents tools convert-to-pdf \
   --payload '{"file":{"name":"contract.docx","url":"https://example.com/contract.docx"}}' \
   --out contract.pdf
 ```
+
+Document create and update are available only through the SDK and CLI so
+projects can place their own allowlists, backups, and verification around
+account document writes:
+
+```bash
+formstack-documents documents create \
+  --payload-file sandbox-document-create.json
+
+formstack-documents documents update 436346 \
+  --payload-file sandbox-document-update.json
+
+formstack-documents documents file 436346 \
+  --out downloaded-template.pdf
+```
+
+Create/update payloads can include PDF bytes as base64 `file_contents`:
+
+```json
+{
+  "name": "Codex API Sandbox PDF Lifecycle",
+  "type": "pdf",
+  "output": "pdf",
+  "folder": "API Sandbox",
+  "file_contents": "JVBERi0xLjcK..."
+}
+```
+
+Do not expose these write commands directly through shared MCP tools. For
+production templates, call them from project-local scripts that require an
+explicit allowlisted document ID and backup the current uploaded file before
+replacement.
 
 ## MCP Server
 
