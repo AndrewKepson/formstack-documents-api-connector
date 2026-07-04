@@ -169,7 +169,7 @@ Example verified tool payload:
 ## SDK
 
 ```ts
-import { WebmergeClient } from "formstack-documents-api-connector";
+import { WebmergeClient } from "@redrockswebdevelopment/formstack-documents-api-connector";
 
 const client = new WebmergeClient({
   apiKey: process.env.WEBMERGE_API_KEY,
@@ -179,3 +179,31 @@ const client = new WebmergeClient({
 const documents = await client.listDocuments({ search: "Contract" });
 const fields = await client.getDocumentFields(documents[0].id, { attributes: true });
 ```
+
+Create a sandbox PDF-backed document from base64 file contents:
+
+```ts
+const created = await client.createDocument({
+  name: "Codex API Sandbox PDF Lifecycle",
+  type: "pdf",
+  output: "pdf",
+  folder: "API Sandbox",
+  file_contents: Buffer.from(pdfBytes).toString("base64")
+});
+```
+
+Replace that same document's uploaded PDF file and verify the detected fields:
+
+```ts
+await client.updateDocument(created.id, {
+  output: "pdf",
+  file_contents: Buffer.from(updatedPdfBytes).toString("base64")
+});
+
+const file = await client.getDocumentFile(created.id);
+const updatedFields = await client.getDocumentFields(created.id);
+```
+
+Document create/update APIs are low-level SDK primitives. Keep production
+document replacement behind project-local allowlists, backup-before-write, and
+post-write field verification.
