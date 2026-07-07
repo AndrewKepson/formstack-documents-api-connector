@@ -2,13 +2,17 @@
 
 Type-safe Node, Express, and CLI connector for the Formstack Documents API, formerly Webmerge.
 
-The initial Express and MCP route surface is limited to non-destructive actions:
+The Express and MCP route surface is limited to non-destructive actions:
 
 - Documents: list, get, fields, source file metadata/content, deliveries.
+- Folders: list document folders.
 - Data Routes: list, get, fields, rules, deliveries.
 - Tools: combine files, convert to PDF, compress PDF, encrypt PDF, split PDF.
 
-Create, update, copy, delete, delivery creation, and merge-triggering endpoints are intentionally not exposed by the Express app yet.
+Document create/update, delivery create/update, copy, delete, and
+merge-triggering endpoints are intentionally not exposed by the Express app yet.
+Selected write operations are available through the SDK and CLI so consuming
+projects can wrap them in project-local allowlists and confirmation steps.
 
 The MCP server follows the same boundary: it exposes no destructive account actions, and any non-read-only file-processing tool requires explicit user verification before the API call is made.
 
@@ -54,10 +58,12 @@ Available endpoints:
 ```text
 GET  /health
 GET  /api/documents?search=&folder=
+GET  /api/documents/folders
 GET  /api/documents/:id
 GET  /api/documents/:id/fields?attributes=1
 GET  /api/documents/:id/file
 GET  /api/documents/:id/deliveries
+GET  /api/folders
 GET  /api/routes
 GET  /api/routes/:id
 GET  /api/routes/:id/fields
@@ -76,6 +82,7 @@ Run locally:
 
 ```bash
 pnpm run cli -- documents list --search Contract
+pnpm run cli -- documents folders
 pnpm run cli -- documents get 436346
 pnpm run cli -- routes rules 129578
 ```
@@ -124,6 +131,58 @@ Create/update payloads can include PDF bytes as base64 `file_contents`:
 }
 ```
 
+Document and data route delivery create/update are also available only through
+the SDK and CLI. Prefer project-local allowlisted CLIs for production accounts:
+
+```bash
+formstack-documents documents deliveries 436346
+formstack-documents documents deliveries list 436346
+formstack-documents documents deliveries create 436346 \
+  --payload-file document-webhook-delivery.json
+formstack-documents documents deliveries update 436346 987654 \
+  --payload-file document-webhook-delivery.json
+
+formstack-documents routes deliveries 60877
+formstack-documents routes deliveries list 60877
+formstack-documents routes deliveries create 60877 \
+  --payload-file route-webhook-delivery.json
+formstack-documents routes deliveries update 60877 123456 \
+  --payload-file route-webhook-delivery.json
+```
+
+Webhook delivery payloads should use `type: "webhook"` and include delivery
+settings accepted by Formstack Documents. The CLI validates the basic webhook
+shape before calling the API:
+
+```json
+{
+  "type": "webhook",
+  "name": "Local Documents Webhook",
+  "active": true,
+  "settings": {
+    "url": "https://example.ngrok-free.app/webhooks/account-servicing/documents",
+    "method": "POST"
+  }
+}
+```
+
+### Folder Paths
+
+The Formstack Documents API has asymmetric folder behavior:
+
+- `GET /api/folders` and `GET /api/folders/documents` return folder IDs, leaf
+  names, type, and date. They do not return parent IDs or full nested paths.
+- Document detail responses also expose only the leaf `folder` name.
+- Document create/update accepts a slash-delimited `folder` string, such as
+  `Account Servicing/Orion 403(b) Servicing`, and will place or move the
+  document in that nested folder path.
+- In account testing, `folder_id` did not move a document and should not be used
+  as the placement contract unless Formstack documents that behavior later.
+
+When duplicate folder names exist at different levels, client projects should
+store the intended full folder path in their registry/config and send that exact
+path in create/update payloads. Treat API reads as lossy for folder ancestry.
+
 Do not expose these write commands directly through shared MCP tools. For
 production templates, call them from project-local scripts that require an
 explicit allowlisted document ID and backup the current uploaded file before
@@ -164,6 +223,7 @@ Read-only MCP tools:
 
 ```text
 list_documents
+list_document_folders
 get_document
 get_document_fields
 get_document_file
@@ -234,6 +294,20 @@ await client.updateDocument(created.id, {
 
 const file = await client.getDocumentFile(created.id);
 const updatedFields = await client.getDocumentFields(created.id);
+```
+
+Create or update a webhook delivery from a guarded project script:
+
+```ts
+await client.createRouteDelivery(60877, {
+  type: "webhook",
+  name: "Account Servicing Local Documents Webhook",
+  active: true,
+  settings: {
+    url: "https://example.ngrok-free.app/webhooks/account-servicing/documents",
+    method: "POST"
+  }
+});
 ```
 
 Document create/update APIs are low-level SDK primitives. Keep production

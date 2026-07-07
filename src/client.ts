@@ -3,6 +3,7 @@ import type {
   BinaryResponse,
   CombineFilesRequest,
   CreateDocumentRequest,
+  DeliveryWriteRequest,
   DocumentFieldsParams,
   DocumentListParams,
   EncryptPdfRequest,
@@ -15,6 +16,7 @@ import type {
   WebmergeDocument,
   WebmergeDocumentFile,
   WebmergeField,
+  WebmergeFolder,
   WebmergeId,
   WebmergeRoute,
   WebmergeRouteRule
@@ -46,6 +48,14 @@ export class WebmergeClient {
     return this.requestJson<WebmergeDocument[]>("/api/documents", {
       query: { search: params.search, folder: params.folder }
     });
+  }
+
+  listFolders(): Promise<WebmergeFolder[]> {
+    return this.requestJson<WebmergeFolder[]>("/api/folders");
+  }
+
+  listDocumentFolders(): Promise<WebmergeFolder[]> {
+    return this.requestJson<WebmergeFolder[]>("/api/folders/documents");
   }
 
   getDocument(id: WebmergeId): Promise<WebmergeDocument> {
@@ -80,6 +90,27 @@ export class WebmergeClient {
     return this.requestJson<WebmergeDelivery[]>(`/api/documents/${encodeURIComponent(String(id))}/deliveries`);
   }
 
+  createDocumentDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
+    return this.requestJson<WebmergeDelivery>(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, {
+      method: "POST",
+      body: payload
+    });
+  }
+
+  updateDocumentDelivery(
+    documentId: WebmergeId,
+    deliveryId: WebmergeId,
+    payload: DeliveryWriteRequest
+  ): Promise<WebmergeDelivery> {
+    return this.requestJson<WebmergeDelivery>(
+      `/api/documents/${encodeURIComponent(String(documentId))}/deliveries/${encodeURIComponent(String(deliveryId))}`,
+      {
+        method: "PUT",
+        body: payload
+      }
+    );
+  }
+
   listRoutes(): Promise<WebmergeRoute[]> {
     return this.requestJson<WebmergeRoute[]>("/api/routes");
   }
@@ -98,6 +129,23 @@ export class WebmergeClient {
 
   getRouteDeliveries(id: WebmergeId): Promise<WebmergeDelivery[]> {
     return this.requestJson<WebmergeDelivery[]>(`/api/routes/${encodeURIComponent(String(id))}/deliveries`);
+  }
+
+  createRouteDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
+    return this.requestJson<WebmergeDelivery>(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, {
+      method: "POST",
+      body: payload
+    });
+  }
+
+  updateRouteDelivery(routeId: WebmergeId, deliveryId: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
+    return this.requestJson<WebmergeDelivery>(
+      `/api/routes/${encodeURIComponent(String(routeId))}/deliveries/${encodeURIComponent(String(deliveryId))}`,
+      {
+        method: "PUT",
+        body: payload
+      }
+    );
   }
 
   combineFiles(payload: CombineFilesRequest): Promise<BinaryResponse> {

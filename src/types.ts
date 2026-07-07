@@ -36,6 +36,14 @@ export interface WebmergeDocument {
   [property: string]: unknown;
 }
 
+export interface WebmergeFolder {
+  id: string;
+  name: string;
+  type: string;
+  date?: string;
+  [property: string]: unknown;
+}
+
 export interface DocumentListParams {
   search?: string;
   folder?: string;
@@ -81,6 +89,18 @@ export interface WebmergeDelivery {
   type: string;
   settings: Record<string, unknown>;
   success?: 0 | 1 | string;
+  [property: string]: unknown;
+}
+
+export interface DeliveryWriteRequest {
+  type: "webhook";
+  name?: string;
+  active?: boolean | 0 | 1 | "0" | "1";
+  settings: Record<string, unknown> & {
+    url?: string;
+    method?: "POST" | "post";
+    headers?: Record<string, string>;
+  };
   [property: string]: unknown;
 }
 

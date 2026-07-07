@@ -1,6 +1,6 @@
 {
   "name": "@redrockswebdevelopment/formstack-documents-api-connector",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Type-safe Node, Express, and CLI connector for the Formstack Documents (Webmerge) API.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,6 +15,7 @@
     "start": "node dist/server.js",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "node -e \"require(\\\"node:fs\\\").rmSync(\\\"dist\\\", { recursive: true, force: true })\""
   },

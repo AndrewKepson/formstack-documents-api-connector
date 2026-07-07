@@ -3,9 +3,11 @@ import "dotenv/config";
 import { readFile, writeFile } from "node:fs/promises";
 import { Command, Option } from "commander";
 import { WebmergeClient } from "./client.js";
+import { parseDeliveryWriteRequest } from "./deliveries.js";
 import type {
   BinaryResponse,
   CreateDocumentRequest,
+  DeliveryWriteRequest,
   UpdateDocumentRequest,
   WebmergeClientOptions,
   WebmergeDocumentFile
@@ -85,6 +87,13 @@ documents
   });
 
 documents
+  .command("folders")
+  .description("List document folders. The API returns folder IDs and leaf names, not full nested paths.")
+  .action(async () => {
+    printJson(await clientFromOptions(program.opts()).listDocumentFolders());
+  });
+
+documents
   .command("get")
   .argument("<id>", "Document ID")
   .action(async (id) => {
@@ -129,11 +138,49 @@ documents
     printJson(await clientFromOptions(program.opts()).updateDocument(id, payload));
   });
 
-documents
+const documentDeliveries = documents
   .command("deliveries")
+  .description("List, create, or update document deliveries")
+  .argument("[id]", "Document ID")
+  .action(async (id) => {
+    if (!id) {
+      documentDeliveries.help({ error: true });
+    }
+    printJson(await clientFromOptions(program.opts()).getDocumentDeliveries(id));
+  });
+
+documentDeliveries
+  .command("list")
   .argument("<id>", "Document ID")
   .action(async (id) => {
     printJson(await clientFromOptions(program.opts()).getDocumentDeliveries(id));
+  });
+
+documentDeliveries
+  .command("create")
+  .argument("<id>", "Document ID")
+  .description("Create a document delivery. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON delivery payload")
+  .option("--payload-file <file>", "Read JSON delivery payload from a file")
+  .action(async (id, options) => {
+    const payload = parseDeliveryWriteRequest(
+      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
+    );
+    printJson(await clientFromOptions(program.opts()).createDocumentDelivery(id, payload));
+  });
+
+documentDeliveries
+  .command("update")
+  .argument("<document-id>", "Document ID")
+  .argument("<delivery-id>", "Delivery ID")
+  .description("Update a document delivery. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON delivery payload")
+  .option("--payload-file <file>", "Read JSON delivery payload from a file")
+  .action(async (documentId, deliveryId, options) => {
+    const payload = parseDeliveryWriteRequest(
+      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
+    );
+    printJson(await clientFromOptions(program.opts()).updateDocumentDelivery(documentId, deliveryId, payload));
   });
 
 const routes = program.command("routes").description("Read data routes");
@@ -163,11 +210,49 @@ routes
     printJson(await clientFromOptions(program.opts()).getRouteRules(id));
   });
 
-routes
+const routeDeliveries = routes
   .command("deliveries")
+  .description("List, create, or update data route deliveries")
+  .argument("[id]", "Route ID")
+  .action(async (id) => {
+    if (!id) {
+      routeDeliveries.help({ error: true });
+    }
+    printJson(await clientFromOptions(program.opts()).getRouteDeliveries(id));
+  });
+
+routeDeliveries
+  .command("list")
   .argument("<id>", "Route ID")
   .action(async (id) => {
     printJson(await clientFromOptions(program.opts()).getRouteDeliveries(id));
+  });
+
+routeDeliveries
+  .command("create")
+  .argument("<id>", "Route ID")
+  .description("Create a data route delivery. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON delivery payload")
+  .option("--payload-file <file>", "Read JSON delivery payload from a file")
+  .action(async (id, options) => {
+    const payload = parseDeliveryWriteRequest(
+      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
+    );
+    printJson(await clientFromOptions(program.opts()).createRouteDelivery(id, payload));
+  });
+
+routeDeliveries
+  .command("update")
+  .argument("<route-id>", "Route ID")
+  .argument("<delivery-id>", "Delivery ID")
+  .description("Update a data route delivery. Prefer project-local allowlisted CLIs for production writes.")
+  .option("--payload <json>", "JSON delivery payload")
+  .option("--payload-file <file>", "Read JSON delivery payload from a file")
+  .action(async (routeId, deliveryId, options) => {
+    const payload = parseDeliveryWriteRequest(
+      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
+    );
+    printJson(await clientFromOptions(program.opts()).updateRouteDelivery(routeId, deliveryId, payload));
   });
 
 const tools = program.command("tools").description("Run non-account-mutating file tools");
