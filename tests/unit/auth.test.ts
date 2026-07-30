@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Request } from "express";
-import { credentialsFromRequest } from "../src/auth.js";
-import { CredentialsError } from "../src/errors.js";
-import { parseServerConfig } from "../src/server-config.schema.js";
+import { credentialsFromRequest } from "../../src/auth.js";
+import { CredentialsError } from "../../src/errors.js";
+import { parseServerConfig } from "../../src/server-config.schema.js";
 
 function requestWithHeaders(headers: Record<string, string> = {}): Request {
   const normalized = new Map(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));

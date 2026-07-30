@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { WebmergeClient } from "../src/client.js";
-import type { WebmergeDocument, WebmergeDocumentFile, WebmergeField } from "../src/contracts.types.js";
+import { WebmergeClient } from "../../src/client.js";
+import type { WebmergeDocument, WebmergeDocumentFile, WebmergeField } from "../../src/contracts.types.js";
 
 type CapturedRequest = {
   url: string;

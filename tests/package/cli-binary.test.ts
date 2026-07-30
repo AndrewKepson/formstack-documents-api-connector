@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+
+const packageMetadata = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
 
 function runCli(args: string[]) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -13,6 +16,18 @@ function runCli(args: string[]) {
     }
   });
 }
+
+test("built CLI reports package version and command help", () => {
+  const version = runCli(["--version"]);
+  const help = runCli(["--help"]);
+
+  assert.equal(version.status, 0, version.stderr);
+  assert.equal(version.stdout.trim(), packageMetadata.version);
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /documents/);
+  assert.match(help.stdout, /routes/);
+  assert.match(help.stdout, /tools/);
+});
 
 test("CLI rejects invalid document writes before creating a client request", () => {
   const result = runCli(["documents", "create", "--payload", "{}"]);

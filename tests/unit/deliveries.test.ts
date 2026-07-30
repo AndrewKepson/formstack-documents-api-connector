@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { WebmergeClient } from "../src/client.js";
+import { WebmergeClient } from "../../src/client.js";
 import {
   parseDeliveryCreateRequest,
   parseDeliveryUpdateRequest,
   parseDeliveryWriteRequest
-} from "../src/deliveries.schema.js";
-import type { DeliveryWriteRequest, WebmergeDelivery } from "../src/contracts.types.js";
+} from "../../src/deliveries.schema.js";
+import type { DeliveryWriteRequest, WebmergeDelivery } from "../../src/contracts.types.js";
 
 type CapturedRequest = {
   url: string;

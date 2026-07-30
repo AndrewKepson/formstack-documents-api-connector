@@ -17,6 +17,7 @@ import type {
   WebmergeClientOptions,
   WebmergeDocumentFile
 } from "./contracts.types.js";
+import { PACKAGE_VERSION } from "./version.js";
 
 function clientFromOptions(options: Record<string, string | undefined>): WebmergeClient {
   const clientOptions: WebmergeClientOptions = {
@@ -76,7 +77,7 @@ const program = new Command();
 program
   .name("formstack-documents")
   .description("CLI for the Formstack Documents (Webmerge) API")
-  .version("1.0.0")
+  .version(PACKAGE_VERSION)
   .addOption(new Option("--key <key>", "API key").env("WEBMERGE_API_KEY"))
   .addOption(new Option("--secret <secret>", "API secret").env("WEBMERGE_API_SECRET"))
   .addOption(new Option("--base-url <url>", "Base URL").env("WEBMERGE_BASE_URL").default("https://www.webmerge.me"));

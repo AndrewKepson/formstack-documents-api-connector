@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-test("built MCP binary initializes and lists tools", async () => {
+test("published MCP entry point initializes and lists tools", async () => {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["dist/mcp.js"],

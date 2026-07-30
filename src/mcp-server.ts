@@ -4,6 +4,7 @@ import { z } from "zod";
 import { WebmergeClient } from "./client.js";
 import { fileInputSchema, idSchema, pdfPermissionSchema, toolOutputSchema } from "./contracts.schema.js";
 import type { BinaryResponse } from "./contracts.types.js";
+import { PACKAGE_NAME, PACKAGE_VERSION } from "./version.js";
 
 const idInput = idSchema;
 
@@ -54,8 +55,8 @@ export interface CreateMcpServerOptions {
 export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer {
   const client = options.client ?? new WebmergeClient();
   const server = new McpServer({
-    name: "formstack-documents-api-connector",
-    version: "1.0.0"
+    name: PACKAGE_NAME,
+    version: PACKAGE_VERSION
   });
 
   server.registerTool(

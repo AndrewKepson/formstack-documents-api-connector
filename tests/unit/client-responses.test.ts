@@ -8,9 +8,9 @@ import {
   webmergeFolderSchema,
   webmergeRouteRuleSchema,
   webmergeRouteSchema
-} from "../src/contracts.schema.js";
-import { WebmergeClient } from "../src/client.js";
-import { WebmergeApiError } from "../src/errors.js";
+} from "../../src/contracts.schema.js";
+import { WebmergeClient } from "../../src/client.js";
+import { WebmergeApiError } from "../../src/errors.js";
 
 test("validates each Formstack response family", () => {
   assert.equal(

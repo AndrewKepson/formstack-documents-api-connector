@@ -18,6 +18,8 @@ The MCP server follows the same boundary: it exposes no destructive account acti
 
 ## Install
 
+Node.js 20 or newer and pnpm 11 are required for development.
+
 ```bash
 pnpm install
 pnpm run build
@@ -209,6 +211,23 @@ Local development:
 ```bash
 pnpm run mcp
 ```
+
+## Validation and Publishing
+
+Run the deterministic validation suite before publishing:
+
+```bash
+pnpm run validate
+```
+
+The suite type-checks the source, runs unit and integration tests, builds a
+clean `dist` directory, exercises the built CLI and MCP executables, and checks
+the npm package contents. `npm publish` runs the same validation through
+`prepublishOnly`; `npm pack` rebuilds through `prepack`.
+
+The package exposes only the public root SDK entry point and `package.json`.
+Import supported APIs from `@redrockswebdevelopment/formstack-documents-api-connector`
+instead of deep-importing files from `dist`.
 
 Example MCP client config:
 

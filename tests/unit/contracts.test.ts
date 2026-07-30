@@ -7,7 +7,7 @@ import {
   encryptPdfSchema,
   singleFileToolSchema,
   splitPdfSchema
-} from "../src/contracts.schema.js";
+} from "../../src/contracts.schema.js";
 
 test("validates document create and update payloads", () => {
   assert.deepEqual(

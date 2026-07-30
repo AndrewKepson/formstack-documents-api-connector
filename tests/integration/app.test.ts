@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { once } from "node:events";
 import { test } from "node:test";
-import { createApp } from "../src/app.js";
-import { WebmergeClient } from "../src/client.js";
+import { createApp } from "../../src/app.js";
+import { WebmergeClient } from "../../src/client.js";
 
 test("Express health and folder routes use the injected client", async () => {
   const client = new WebmergeClient({

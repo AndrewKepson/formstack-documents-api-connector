@@ -4,6 +4,13 @@
   "description": "Type-safe Node, Express, and CLI connector for the Formstack Documents (Webmerge) API.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "formstack-documents": "dist/cli.js",
     "formstack-documents-mcp": "dist/mcp.js",
@@ -15,9 +22,14 @@
     "start": "node dist/server.js",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "pnpm run test:unit && pnpm run build && pnpm run test:package",
+    "test:unit": "node --import tsx --test tests/unit/*.test.ts tests/integration/*.test.ts",
+    "test:package": "node --import tsx --test --test-concurrency=1 tests/package/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prebuild": "node -e \"require(\\\"node:fs\\\").rmSync(\\\"dist\\\", { recursive: true, force: true })\""
+    "validate": "pnpm run typecheck && pnpm test",
+    "prebuild": "node -e \"require(\\\"node:fs\\\").rmSync(\\\"dist\\\", { recursive: true, force: true })\"",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run validate"
   },
   "keywords": [
     "formstack",
@@ -27,8 +39,19 @@
     "express",
     "cli"
   ],
-  "author": "",
+  "author": "Andrew Kepson",
   "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewKepson/formstack-documents-api-connector.git"
+  },
+  "homepage": "https://github.com/AndrewKepson/formstack-documents-api-connector#readme",
+  "bugs": {
+    "url": "https://github.com/AndrewKepson/formstack-documents-api-connector/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^14.0.2",
@@ -50,5 +73,5 @@
     "dist",
     "README.md"
   ],
-  "packageManager": "pnpm@11.1.0"
+  "packageManager": "pnpm@11.15.1"
 }
