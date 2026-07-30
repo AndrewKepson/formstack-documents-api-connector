@@ -81,6 +81,17 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "list_document_folders",
+    {
+      title: "List Document Folders",
+      description:
+        "List Formstack Documents folders. The API returns folder IDs and leaf names, not full nested folder paths.",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+    },
+    async () => jsonContent(await client.listDocumentFolders())
+  );
+
+  server.registerTool(
     "get_document",
     {
       title: "Get Document",

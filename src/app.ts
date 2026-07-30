@@ -50,6 +50,22 @@ export function createApp(): express.Express {
     }
   });
 
+  app.get("/api/documents/folders", async (req, res, next) => {
+    try {
+      res.json(await clientFor(req).listDocumentFolders());
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/folders", async (req, res, next) => {
+    try {
+      res.json(await clientFor(req).listFolders());
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get("/api/documents/:id", async (req, res, next) => {
     try {
       res.json(await clientFor(req).getDocument(req.params.id));
