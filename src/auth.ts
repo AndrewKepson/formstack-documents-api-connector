@@ -1,4 +1,3 @@
-import type { Request } from "express";
 import { CredentialsError } from "./errors.js";
 import type { WebmergeCredentials } from "./contracts.types.js";
 
@@ -7,12 +6,12 @@ export interface CredentialResolutionOptions {
   environment?: NodeJS.ProcessEnv;
 }
 
-export function credentialsFromRequest(
-  req: Request,
+export function credentialsFromHeaders(
+  headers: Headers,
   options: CredentialResolutionOptions = {}
 ): WebmergeCredentials {
-  const headerKey = req.header("x-webmerge-api-key") ?? req.header("x-formstack-documents-api-key");
-  const headerSecret = req.header("x-webmerge-api-secret") ?? req.header("x-formstack-documents-api-secret");
+  const headerKey = headers.get("x-webmerge-api-key") ?? headers.get("x-formstack-documents-api-key");
+  const headerSecret = headers.get("x-webmerge-api-secret") ?? headers.get("x-formstack-documents-api-secret");
 
   if (headerKey || headerSecret) {
     if (!headerKey || !headerSecret) {
@@ -22,7 +21,7 @@ export function credentialsFromRequest(
     return { apiKey: headerKey, apiSecret: headerSecret };
   }
 
-  const basic = req.header("authorization");
+  const basic = headers.get("authorization");
   if (basic) {
     if (!basic.startsWith("Basic ")) {
       throw new CredentialsError("Authorization must use Basic authentication");

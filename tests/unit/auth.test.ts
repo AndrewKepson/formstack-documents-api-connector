@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Request } from "express";
-import { credentialsFromRequest } from "../../src/auth.js";
+import { credentialsFromHeaders } from "../../src/auth.js";
 import { CredentialsError } from "../../src/errors.js";
 import { parseServerConfig } from "../../src/server-config.schema.js";
 
-function requestWithHeaders(headers: Record<string, string> = {}): Request {
-  const normalized = new Map(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
-  return {
-    header(name: string) {
-      return normalized.get(name.toLowerCase());
-    }
-  } as Request;
+function headers(values: Record<string, string> = {}): Headers {
+  return new Headers(values);
 }
 
 const environment = {
@@ -21,8 +15,8 @@ const environment = {
 
 test("request credentials take precedence over environment credentials", () => {
   assert.deepEqual(
-    credentialsFromRequest(
-      requestWithHeaders({
+    credentialsFromHeaders(
+      headers({
         "x-webmerge-api-key": "request-key",
         "x-webmerge-api-secret": "request-secret"
       }),
@@ -32,10 +26,26 @@ test("request credentials take precedence over environment credentials", () => {
   );
 });
 
+test("Formstack header aliases and Basic authentication resolve credentials", () => {
+  assert.deepEqual(
+    credentialsFromHeaders(
+      headers({
+        "x-formstack-documents-api-key": "formstack-key",
+        "x-formstack-documents-api-secret": "formstack-secret"
+      })
+    ),
+    { apiKey: "formstack-key", apiSecret: "formstack-secret" }
+  );
+  assert.deepEqual(credentialsFromHeaders(headers({ authorization: "Basic a2V5OnNlY3JldA==" })), {
+    apiKey: "key",
+    apiSecret: "secret"
+  });
+});
+
 test("partial or malformed request credentials fail closed", () => {
   assert.throws(
     () =>
-      credentialsFromRequest(requestWithHeaders({ "x-webmerge-api-key": "request-key" }), {
+      credentialsFromHeaders(headers({ "x-webmerge-api-key": "request-key" }), {
         allowEnvironmentFallback: true,
         environment
       }),
@@ -43,21 +53,25 @@ test("partial or malformed request credentials fail closed", () => {
   );
   assert.throws(
     () =>
-      credentialsFromRequest(requestWithHeaders({ authorization: "Basic a2V5Og==" }), {
+      credentialsFromHeaders(headers({ authorization: "Basic a2V5Og==" }), {
         allowEnvironmentFallback: true,
         environment
       }),
+    CredentialsError
+  );
+  assert.throws(
+    () => credentialsFromHeaders(headers({ authorization: "Bearer token" })),
     CredentialsError
   );
 });
 
 test("environment fallback is explicit", () => {
-  assert.deepEqual(credentialsFromRequest(requestWithHeaders(), { allowEnvironmentFallback: true, environment }), {
+  assert.deepEqual(credentialsFromHeaders(headers(), { allowEnvironmentFallback: true, environment }), {
     apiKey: "environment-key",
     apiSecret: "environment-secret"
   });
   assert.throws(
-    () => credentialsFromRequest(requestWithHeaders(), { allowEnvironmentFallback: false, environment }),
+    () => credentialsFromHeaders(headers(), { allowEnvironmentFallback: false, environment }),
     CredentialsError
   );
 });

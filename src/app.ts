@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ZodError, type ZodType } from "zod";
-import { credentialsFromRequest } from "./auth.js";
+import { credentialsFromHeaders } from "./auth.js";
 import { CredentialsError, WebmergeApiError } from "./errors.js";
 import {
   combineFilesSchema,
@@ -19,8 +19,17 @@ export interface CreateAppOptions {
 }
 
 function clientFor(req: Request, allowEnvironmentFallback: boolean): WebmergeClient {
+  const headers = new Headers();
+  for (let index = 0; index < req.rawHeaders.length; index += 2) {
+    const name = req.rawHeaders[index];
+    const value = req.rawHeaders[index + 1];
+    if (name !== undefined && value !== undefined) {
+      headers.append(name, value);
+    }
+  }
+
   return new WebmergeClient({
-    ...credentialsFromRequest(req, { allowEnvironmentFallback }),
+    ...credentialsFromHeaders(headers, { allowEnvironmentFallback }),
     baseUrl: process.env.WEBMERGE_BASE_URL
   });
 }
