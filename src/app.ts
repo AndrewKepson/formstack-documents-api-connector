@@ -13,9 +13,14 @@ import {
 import { WebmergeClient } from "./client.js";
 import type { BinaryResponse } from "./types.js";
 
-function clientFor(req: Request): WebmergeClient {
+export interface CreateAppOptions {
+  allowEnvironmentCredentialFallback?: boolean;
+  clientFactory?: (req: Request) => WebmergeClient;
+}
+
+function clientFor(req: Request, allowEnvironmentFallback: boolean): WebmergeClient {
   return new WebmergeClient({
-    ...credentialsFromRequest(req),
+    ...credentialsFromRequest(req, { allowEnvironmentFallback }),
     baseUrl: process.env.WEBMERGE_BASE_URL
   });
 }
@@ -32,8 +37,11 @@ function sendBinary(res: Response, result: BinaryResponse): void {
   res.send(result.body);
 }
 
-export function createApp(): express.Express {
+export function createApp(options: CreateAppOptions = {}): express.Express {
   const app = express();
+  const createClient =
+    options.clientFactory ??
+    ((req: Request) => clientFor(req, options.allowEnvironmentCredentialFallback ?? false));
 
   app.use(express.json({ limit: "25mb" }));
 
@@ -44,7 +52,7 @@ export function createApp(): express.Express {
   app.get("/api/documents", async (req, res, next) => {
     try {
       const query = documentListQuerySchema.parse(req.query);
-      res.json(await clientFor(req).listDocuments(query));
+      res.json(await createClient(req).listDocuments(query));
     } catch (error) {
       next(error);
     }
@@ -52,7 +60,7 @@ export function createApp(): express.Express {
 
   app.get("/api/documents/folders", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).listDocumentFolders());
+      res.json(await createClient(req).listDocumentFolders());
     } catch (error) {
       next(error);
     }
@@ -60,7 +68,7 @@ export function createApp(): express.Express {
 
   app.get("/api/folders", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).listFolders());
+      res.json(await createClient(req).listFolders());
     } catch (error) {
       next(error);
     }
@@ -68,7 +76,7 @@ export function createApp(): express.Express {
 
   app.get("/api/documents/:id", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getDocument(req.params.id));
+      res.json(await createClient(req).getDocument(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -77,7 +85,7 @@ export function createApp(): express.Express {
   app.get("/api/documents/:id/fields", async (req, res, next) => {
     try {
       const query = fieldsQuerySchema.parse(req.query);
-      res.json(await clientFor(req).getDocumentFields(req.params.id, query));
+      res.json(await createClient(req).getDocumentFields(req.params.id, query));
     } catch (error) {
       next(error);
     }
@@ -85,7 +93,7 @@ export function createApp(): express.Express {
 
   app.get("/api/documents/:id/file", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getDocumentFile(req.params.id));
+      res.json(await createClient(req).getDocumentFile(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -93,7 +101,7 @@ export function createApp(): express.Express {
 
   app.get("/api/documents/:id/deliveries", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getDocumentDeliveries(req.params.id));
+      res.json(await createClient(req).getDocumentDeliveries(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -101,7 +109,7 @@ export function createApp(): express.Express {
 
   app.get("/api/routes", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).listRoutes());
+      res.json(await createClient(req).listRoutes());
     } catch (error) {
       next(error);
     }
@@ -109,7 +117,7 @@ export function createApp(): express.Express {
 
   app.get("/api/routes/:id", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getRoute(req.params.id));
+      res.json(await createClient(req).getRoute(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -117,7 +125,7 @@ export function createApp(): express.Express {
 
   app.get("/api/routes/:id/fields", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getRouteFields(req.params.id));
+      res.json(await createClient(req).getRouteFields(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -125,7 +133,7 @@ export function createApp(): express.Express {
 
   app.get("/api/routes/:id/rules", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getRouteRules(req.params.id));
+      res.json(await createClient(req).getRouteRules(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -133,7 +141,7 @@ export function createApp(): express.Express {
 
   app.get("/api/routes/:id/deliveries", async (req, res, next) => {
     try {
-      res.json(await clientFor(req).getRouteDeliveries(req.params.id));
+      res.json(await createClient(req).getRouteDeliveries(req.params.id));
     } catch (error) {
       next(error);
     }
@@ -141,7 +149,7 @@ export function createApp(): express.Express {
 
   app.post("/api/tools/combine", async (req, res, next) => {
     try {
-      sendBinary(res, await clientFor(req).combineFiles(parseBody(combineFilesSchema, req.body)));
+      sendBinary(res, await createClient(req).combineFiles(parseBody(combineFilesSchema, req.body)));
     } catch (error) {
       next(error);
     }
@@ -149,7 +157,7 @@ export function createApp(): express.Express {
 
   app.post("/api/tools/convert-to-pdf", async (req, res, next) => {
     try {
-      sendBinary(res, await clientFor(req).convertToPdf(parseBody(singleFileToolSchema, req.body)));
+      sendBinary(res, await createClient(req).convertToPdf(parseBody(singleFileToolSchema, req.body)));
     } catch (error) {
       next(error);
     }
@@ -157,7 +165,7 @@ export function createApp(): express.Express {
 
   app.post("/api/tools/compress-pdf", async (req, res, next) => {
     try {
-      sendBinary(res, await clientFor(req).compressPdf(parseBody(singleFileToolSchema, req.body)));
+      sendBinary(res, await createClient(req).compressPdf(parseBody(singleFileToolSchema, req.body)));
     } catch (error) {
       next(error);
     }
@@ -165,7 +173,7 @@ export function createApp(): express.Express {
 
   app.post("/api/tools/encrypt-pdf", async (req, res, next) => {
     try {
-      sendBinary(res, await clientFor(req).encryptPdf(parseBody(encryptPdfSchema, req.body)));
+      sendBinary(res, await createClient(req).encryptPdf(parseBody(encryptPdfSchema, req.body)));
     } catch (error) {
       next(error);
     }
@@ -173,7 +181,7 @@ export function createApp(): express.Express {
 
   app.post("/api/tools/split-pdf", async (req, res, next) => {
     try {
-      sendBinary(res, await clientFor(req).splitPdf(parseBody(splitPdfSchema, req.body)));
+      sendBinary(res, await createClient(req).splitPdf(parseBody(splitPdfSchema, req.body)));
     } catch (error) {
       next(error);
     }

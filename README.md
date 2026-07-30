@@ -39,6 +39,13 @@ The Express app also accepts credentials per request:
 - `x-formstack-documents-api-key` and `x-formstack-documents-api-secret`
 - Basic auth using `key:secret`
 
+The bundled server binds to `127.0.0.1` by default. Environment credential
+fallback is enabled for that local-only mode. Set
+`ALLOW_ENV_CREDENTIAL_FALLBACK=false` to require credentials on every request.
+The server refuses to start with environment credential fallback enabled when
+`HOST` is not a loopback host. Remote deployments need a separate inbound
+authentication boundary and should not expose the bundled server directly.
+
 ## Express Server
 
 ```bash
