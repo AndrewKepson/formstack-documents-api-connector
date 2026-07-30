@@ -8,6 +8,7 @@ import type {
   UpdateDocumentRequest,
   WebmergeDelivery,
   WebmergeDocument,
+  WebmergeDocumentFieldMap,
   WebmergeDocumentFile,
   WebmergeField,
   WebmergeFileInput,
@@ -115,6 +116,11 @@ export const webmergeFieldSchema: z.ZodType<WebmergeField> = z
   })
   .passthrough();
 
+const webmergeDocumentFieldMapSchema: z.ZodType<WebmergeDocumentFieldMap> = z.record(
+  z.string(),
+  z.string()
+);
+
 export const webmergeDocumentSchema: z.ZodType<WebmergeDocument> = z
   .object({
     id: responseIdSchema,
@@ -127,7 +133,7 @@ export const webmergeDocumentSchema: z.ZodType<WebmergeDocument> = z
     size_height: z.string().optional(),
     active: z.string().optional(),
     url: z.string(),
-    fields: z.array(webmergeFieldSchema).optional(),
+    fields: z.union([z.array(webmergeFieldSchema), webmergeDocumentFieldMapSchema]).optional(),
     html: z.string().optional()
   })
   .passthrough();

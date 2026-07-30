@@ -5,6 +5,7 @@ import {
   webmergeDocumentFileSchema,
   webmergeDocumentSchema,
   webmergeFieldSchema,
+  webmergeFieldsSchema,
   webmergeFolderSchema,
   webmergeRouteRuleSchema,
   webmergeRouteSchema
@@ -56,6 +57,71 @@ test("validates each Formstack response family", () => {
   assert.throws(() => webmergeDeliverySchema.parse({ id: "3", type: "webhook", settings: [] }));
   assert.throws(() => webmergeRouteSchema.parse({ id: "4", name: "Route", url: "route" }));
   assert.throws(() => webmergeRouteRuleSchema.parse({ conditions: [{ exp: "==", value: "active" }] }));
+});
+
+test("validates both embedded document field shapes without weakening field lists", () => {
+  const document = {
+    id: "1274769",
+    key: "document-key",
+    type: "pdf",
+    name: "Document",
+    output: "pdf",
+    url: "https://www.webmerge.test/merge/1274769/document-key"
+  };
+  const fieldArray = [{ key: "first_name", name: "FirstName" }];
+  const fieldMap = { FirstName: "first_name", LastName: "last_name" };
+
+  assert.deepEqual(webmergeDocumentSchema.parse({ ...document, fields: fieldMap }).fields, fieldMap);
+  assert.deepEqual(webmergeDocumentSchema.parse({ ...document, fields: fieldArray }).fields, fieldArray);
+  assert.throws(() => webmergeDocumentSchema.parse({ ...document, fields: { FirstName: 123 } }));
+  assert.deepEqual(webmergeFieldsSchema.parse(fieldArray), fieldArray);
+  assert.throws(() => webmergeFieldsSchema.parse(fieldMap));
+});
+
+test("client parses document field maps while keeping the fields endpoint array-only", async () => {
+  const document = {
+    id: "1274769",
+    key: "document-key",
+    type: "pdf",
+    name: "Document",
+    output: "pdf",
+    url: "https://www.webmerge.test/merge/1274769/document-key",
+    fields: { FirstName: "first_name", LastName: "last_name" }
+  };
+  const client = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: async (input) => {
+      const path = new URL(String(input)).pathname;
+      const body = path.endsWith("/fields") ? [{ key: "first_name", name: "FirstName" }] : document;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  assert.deepEqual(await client.getDocument("1274769"), document);
+  assert.deepEqual(await client.getDocumentFields("1274769"), [
+    { key: "first_name", name: "FirstName" }
+  ]);
+
+  const invalidFieldsClient = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: async () =>
+      new Response(JSON.stringify(document.fields), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      })
+  });
+
+  await assert.rejects(
+    invalidFieldsClient.getDocumentFields("1274769"),
+    (error) => error instanceof WebmergeApiError && error.status === 502
+  );
 });
 
 test("client rejects malformed JSON responses as upstream gateway errors", async () => {

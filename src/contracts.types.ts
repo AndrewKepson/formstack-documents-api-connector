@@ -20,6 +20,8 @@ export interface WebmergeField {
   [attribute: string]: unknown;
 }
 
+export type WebmergeDocumentFieldMap = Record<string, string>;
+
 export interface WebmergeDocument {
   id: string;
   key: string;
@@ -31,7 +33,7 @@ export interface WebmergeDocument {
   size_height?: string;
   active?: "0" | "1" | string;
   url: string;
-  fields?: WebmergeField[];
+  fields?: WebmergeField[] | WebmergeDocumentFieldMap;
   html?: string;
   [property: string]: unknown;
 }
