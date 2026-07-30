@@ -1,225 +1,57 @@
-import express, { type NextFunction, type Request, type Response } from "express";
-import { ZodError, type ZodType } from "zod";
-import { credentialsFromHeaders } from "./auth.js";
+import { Hono } from "hono";
+import { secureHeaders } from "hono/secure-headers";
+import { ZodError } from "zod";
 import { CredentialsError, WebmergeApiError } from "./errors.js";
-import {
-  combineFilesSchema,
-  documentListQuerySchema,
-  encryptPdfSchema,
-  fieldsQuerySchema,
-  singleFileToolSchema,
-  splitPdfSchema
-} from "./contracts.schema.js";
-import { WebmergeClient } from "./client.js";
-import type { BinaryResponse } from "./contracts.types.js";
+import type { ConnectorApp, ConnectorEnvironment, CreateAppOptions } from "./http/app.types.js";
+import { createClientMiddleware } from "./http/client.middleware.js";
+import { createDataRouteRoutes } from "./http/routes/data-routes.routes.js";
+import { createDocumentRoutes } from "./http/routes/documents.routes.js";
+import { createFolderRoutes } from "./http/routes/folders.routes.js";
+import { createToolRoutes } from "./http/routes/tools.routes.js";
 
-export interface CreateAppOptions {
-  allowEnvironmentCredentialFallback?: boolean;
-  clientFactory?: (req: Request) => WebmergeClient;
-}
+export type { ConnectorApp, CreateAppOptions } from "./http/app.types.js";
 
-function clientFor(req: Request, allowEnvironmentFallback: boolean): WebmergeClient {
-  const headers = new Headers();
-  for (let index = 0; index < req.rawHeaders.length; index += 2) {
-    const name = req.rawHeaders[index];
-    const value = req.rawHeaders[index + 1];
-    if (name !== undefined && value !== undefined) {
-      headers.append(name, value);
-    }
-  }
+export function createApp(options: CreateAppOptions = {}): ConnectorApp {
+  const app = new Hono<ConnectorEnvironment>();
 
-  return new WebmergeClient({
-    ...credentialsFromHeaders(headers, { allowEnvironmentFallback }),
-    baseUrl: process.env.WEBMERGE_BASE_URL
-  });
-}
+  app.use("*", secureHeaders({ strictTransportSecurity: false }));
 
-function parseBody<T>(schema: ZodType<T>, body: unknown): T {
-  return schema.parse(body);
-}
+  app.get("/health", (context) =>
+    context.json({ ok: true, service: "formstack-documents-api-connector" })
+  );
 
-function sendBinary(res: Response, result: BinaryResponse): void {
-  res.type(result.contentType);
-  if (result.contentDisposition) {
-    res.setHeader("content-disposition", result.contentDisposition);
-  }
-  res.send(result.body);
-}
+  app.use("/api/*", createClientMiddleware(options));
+  app.route("/api", createFolderRoutes());
+  app.route("/api", createDocumentRoutes());
+  app.route("/api", createDataRouteRoutes());
+  app.route("/api", createToolRoutes());
 
-export function createApp(options: CreateAppOptions = {}): express.Express {
-  const app = express();
-  const createClient =
-    options.clientFactory ??
-    ((req: Request) => clientFor(req, options.allowEnvironmentCredentialFallback ?? false));
+  app.notFound((context) => context.json({ status: 404, message: "Not found" }, 404));
 
-  app.use(express.json({ limit: "25mb" }));
-
-  app.get("/health", (_req, res) => {
-    res.json({ ok: true, service: "formstack-documents-api-connector" });
-  });
-
-  app.get("/api/documents", async (req, res, next) => {
-    try {
-      const query = documentListQuerySchema.parse(req.query);
-      res.json(await createClient(req).listDocuments(query));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/documents/folders", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).listDocumentFolders());
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/folders", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).listFolders());
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/documents/:id", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getDocument(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/documents/:id/fields", async (req, res, next) => {
-    try {
-      const query = fieldsQuerySchema.parse(req.query);
-      res.json(await createClient(req).getDocumentFields(req.params.id, query));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/documents/:id/file", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getDocumentFile(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/documents/:id/deliveries", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getDocumentDeliveries(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/routes", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).listRoutes());
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/routes/:id", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getRoute(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/routes/:id/fields", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getRouteFields(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/routes/:id/rules", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getRouteRules(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/routes/:id/deliveries", async (req, res, next) => {
-    try {
-      res.json(await createClient(req).getRouteDeliveries(req.params.id));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/tools/combine", async (req, res, next) => {
-    try {
-      sendBinary(res, await createClient(req).combineFiles(parseBody(combineFilesSchema, req.body)));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/tools/convert-to-pdf", async (req, res, next) => {
-    try {
-      sendBinary(res, await createClient(req).convertToPdf(parseBody(singleFileToolSchema, req.body)));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/tools/compress-pdf", async (req, res, next) => {
-    try {
-      sendBinary(res, await createClient(req).compressPdf(parseBody(singleFileToolSchema, req.body)));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/tools/encrypt-pdf", async (req, res, next) => {
-    try {
-      sendBinary(res, await createClient(req).encryptPdf(parseBody(encryptPdfSchema, req.body)));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/api/tools/split-pdf", async (req, res, next) => {
-    try {
-      sendBinary(res, await createClient(req).splitPdf(parseBody(splitPdfSchema, req.body)));
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  app.onError((error, context) => {
     if (error instanceof ZodError) {
-      res.status(400).json({
-        status: 400,
-        message: "Invalid request",
-        details: error.issues
-      });
-      return;
+      return context.json(
+        {
+          status: 400,
+          message: "Invalid request",
+          details: error.issues
+        },
+        400
+      );
     }
 
     if (error instanceof CredentialsError) {
-      res.status(401).json({ status: 401, message: error.message });
-      return;
+      return context.json({ status: 401, message: error.message }, 401);
     }
 
     if (error instanceof WebmergeApiError) {
-      res.status(error.status).json(error.toJSON());
-      return;
+      return new Response(JSON.stringify(error.toJSON()), {
+        status: error.status,
+        headers: { "content-type": "application/json; charset=UTF-8" }
+      });
     }
 
-    res.status(500).json({
-      status: 500,
-      message: error instanceof Error ? error.message : "Unexpected error"
-    });
+    return context.json({ status: 500, message: "Internal server error" }, 500);
   });
 
   return app;
