@@ -1,7 +1,7 @@
 {
   "name": "@redrockswebdevelopment/formstack-documents-api-connector",
   "version": "1.1.2",
-  "description": "Type-safe Node, Express, and CLI connector for the Formstack Documents (Webmerge) API.",
+  "description": "Type-safe Node, Hono, MCP, and CLI connector for the Formstack Documents (Webmerge) API.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -36,7 +36,7 @@
     "webmerge",
     "documents",
     "api",
-    "express",
+    "hono",
     "cli"
   ],
   "author": "Andrew Kepson",

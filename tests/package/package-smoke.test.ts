@@ -53,12 +53,18 @@ test("packed artifact exposes the SDK and runnable CLI/MCP entry points", async 
       [
         "--input-type=module",
         "--eval",
-        `import * as sdk from ${JSON.stringify(packageMetadata.name)}; process.stdout.write(JSON.stringify([typeof sdk.WebmergeClient, typeof sdk.createApp, typeof sdk.createMcpServer]));`
+        `import * as sdk from ${JSON.stringify(packageMetadata.name)}; const app = sdk.createApp(); process.stdout.write(JSON.stringify([typeof sdk.WebmergeClient, typeof sdk.createApp, typeof sdk.createMcpServer, typeof app.fetch, typeof app.request]));`
       ],
       { cwd: consumerDirectory, encoding: "utf8" }
     );
     assert.equal(rootImport.status, 0, rootImport.stderr);
-    assert.deepEqual(JSON.parse(rootImport.stdout), ["function", "function", "function"]);
+    assert.deepEqual(JSON.parse(rootImport.stdout), [
+      "function",
+      "function",
+      "function",
+      "function",
+      "function"
+    ]);
 
     const cli = spawnSync(process.execPath, [join(packageDirectory, "dist/cli.js"), "--version"], {
       encoding: "utf8"

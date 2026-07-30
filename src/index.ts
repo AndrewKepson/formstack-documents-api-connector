@@ -1,4 +1,4 @@
-export { createApp, type CreateAppOptions } from "./app.js";
+export { createApp, type ConnectorApp, type CreateAppOptions } from "./app.js";
 export { WebmergeClient, createWebmergeClient } from "./client.js";
 export {
   deliveryCreateSchema,

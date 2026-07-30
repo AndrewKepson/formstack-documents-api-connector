@@ -1,8 +1,8 @@
 # Formstack Documents API Connector
 
-Type-safe Node, Express, and CLI connector for the Formstack Documents API, formerly Webmerge.
+Type-safe Node, Hono, MCP, and CLI connector for the Formstack Documents API, formerly Webmerge.
 
-The Express and MCP route surface is limited to non-destructive actions:
+The Hono and MCP route surface is limited to non-destructive actions:
 
 - Documents: list, get, fields, source file metadata/content, deliveries.
 - Folders: list document folders.
@@ -10,7 +10,7 @@ The Express and MCP route surface is limited to non-destructive actions:
 - Tools: combine files, convert to PDF, compress PDF, encrypt PDF, split PDF.
 
 Document create/update, delivery create/update, copy, delete, and
-merge-triggering endpoints are intentionally not exposed by the Express app yet.
+merge-triggering endpoints are intentionally not exposed by the Hono app yet.
 Selected write operations are available through the SDK and CLI so consuming
 projects can wrap them in project-local allowlists and confirmation steps.
 
@@ -35,7 +35,7 @@ WEBMERGE_API_SECRET=your-secret
 WEBMERGE_BASE_URL=https://www.webmerge.me
 ```
 
-The Express app also accepts credentials per request:
+The Hono app also accepts credentials per request:
 
 - `x-webmerge-api-key` and `x-webmerge-api-secret`
 - `x-formstack-documents-api-key` and `x-formstack-documents-api-secret`
@@ -48,7 +48,7 @@ The server refuses to start with environment credential fallback enabled when
 `HOST` is not a loopback host. Remote deployments need a separate inbound
 authentication boundary and should not expose the bundled server directly.
 
-## Express Server
+## Hono Server
 
 ```bash
 pnpm run dev
@@ -85,6 +85,21 @@ POST /api/tools/encrypt-pdf
 POST /api/tools/split-pdf
 ```
 
+`createApp()` returns an unbound Hono application. Use Web-standard requests to
+embed or test it without opening a socket:
+
+```ts
+import { createApp } from "@redrockswebdevelopment/formstack-documents-api-connector";
+
+const app = createApp();
+const response = await app.request("/health");
+const health = await response.json();
+```
+
+The bundled Node entry point passes `app.fetch` to `@hono/node-server`. Custom
+hosts can do the same, while `CreateAppOptions.clientFactory` receives the
+incoming Web `Request` when request-scoped client injection is needed.
+
 ## CLI
 
 Run locally:
@@ -114,7 +129,7 @@ formstack-documents tools convert-to-pdf \
 ```
 
 Invalid JSON, schema-invalid payloads, and missing required options exit with a
-nonzero status before an API request is made. Express validation errors use a
+nonzero status before an API request is made. Hono validation errors use a
 `400` JSON response; missing request credentials use `401`; Formstack API
 errors preserve the upstream status and details.
 
@@ -234,6 +249,11 @@ rebuilds through `prepack`.
 The package exposes only the public root SDK entry point and `package.json`.
 Import supported APIs from `@redrockswebdevelopment/formstack-documents-api-connector`
 instead of deep-importing files from `dist`.
+
+The Hono migration changes the public return type of `createApp` and changes
+`CreateAppOptions.clientFactory` from an Express request to a Web `Request`.
+Publish this migration as a semver-major release if existing consumers compile
+against either framework-specific type.
 
 Example MCP client config:
 
