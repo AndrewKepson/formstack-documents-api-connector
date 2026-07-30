@@ -44,3 +44,13 @@ test("CLI rejects invalid file tool payloads before creating a client request", 
   assert.match(result.stderr, /Either url or contents is required/);
   assert.doesNotMatch(result.stderr, /Missing Formstack Documents API key or secret/);
 });
+
+test("CLI reports malformed JSON and missing required options as failures", () => {
+  const malformedJson = runCli(["documents", "create", "--payload", "{"]);
+  const missingPayload = runCli(["tools", "convert-to-pdf"]);
+
+  assert.equal(malformedJson.status, 1);
+  assert.match(malformedJson.stderr, /JSON/);
+  assert.equal(missingPayload.status, 1);
+  assert.match(missingPayload.stderr, /required option '--payload/);
+});

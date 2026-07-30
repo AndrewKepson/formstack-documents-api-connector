@@ -113,6 +113,11 @@ formstack-documents tools convert-to-pdf \
   --out contract.pdf
 ```
 
+Invalid JSON, schema-invalid payloads, and missing required options exit with a
+nonzero status before an API request is made. Express validation errors use a
+`400` JSON response; missing request credentials use `401`; Formstack API
+errors preserve the upstream status and details.
+
 Document create and update are available only through the SDK and CLI so
 projects can place their own allowlists, backups, and verification around
 account document writes:
@@ -221,9 +226,10 @@ pnpm run validate
 ```
 
 The suite type-checks the source, runs unit and integration tests, builds a
-clean `dist` directory, exercises the built CLI and MCP executables, and checks
-the npm package contents. `npm publish` runs the same validation through
-`prepublishOnly`; `npm pack` rebuilds through `prepack`.
+clean `dist` directory, exercises the built CLI and MCP executables, creates
+and extracts an npm archive, imports its SDK, and runs both packaged binaries.
+`npm publish` runs the same validation through `prepublishOnly`; `npm pack`
+rebuilds through `prepack`.
 
 The package exposes only the public root SDK entry point and `package.json`.
 Import supported APIs from `@redrockswebdevelopment/formstack-documents-api-connector`

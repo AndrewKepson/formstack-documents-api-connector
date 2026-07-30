@@ -89,3 +89,65 @@ test("client rejects non-JSON success responses as upstream gateway errors", asy
     (error) => error instanceof WebmergeApiError && error.status === 502
   );
 });
+
+test("client validates folder aliases and preserves binary response metadata", async () => {
+  const paths: string[] = [];
+  const client = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      paths.push(path);
+
+      if (path.startsWith("/api/folders")) {
+        return new Response(JSON.stringify([{ id: 1, name: "Folder", type: "folder" }]), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+
+      assert.equal(init?.method, "POST");
+      assert.equal(new Headers(init?.headers).get("content-type"), "application/json");
+      assert.deepEqual(JSON.parse(String(init?.body)), {
+        file: { name: "source.docx", contents: "base64" }
+      });
+      return new Response(Buffer.from("pdf-bytes"), {
+        status: 200,
+        headers: {
+          "content-type": "application/pdf",
+          "content-disposition": "attachment; filename=result.pdf"
+        }
+      });
+    }
+  });
+
+  assert.deepEqual(await client.listFolders(), [{ id: "1", name: "Folder", type: "folder" }]);
+  assert.deepEqual(await client.listDocumentFolders(), [{ id: "1", name: "Folder", type: "folder" }]);
+  const result = await client.convertToPdf({ file: { name: "source.docx", contents: "base64" } });
+
+  assert.deepEqual(paths, ["/api/folders", "/api/folders/documents", "/api/tools/convert_to_pdf"]);
+  assert.equal(result.contentType, "application/pdf");
+  assert.equal(result.contentDisposition, "attachment; filename=result.pdf");
+  assert.equal(result.body.toString(), "pdf-bytes");
+});
+
+test("client preserves upstream API error status and details", async () => {
+  const client = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: async () =>
+      new Response(JSON.stringify({ error: "rate limited" }), {
+        status: 429,
+        headers: { "content-type": "application/json" }
+      })
+  });
+
+  await assert.rejects(client.listFolders(), (error) => {
+    assert.ok(error instanceof WebmergeApiError);
+    assert.equal(error.status, 429);
+    assert.deepEqual(error.details, { error: "rate limited" });
+    return true;
+  });
+});
