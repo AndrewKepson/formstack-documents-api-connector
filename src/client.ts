@@ -1,3 +1,16 @@
+import { ZodError, type ZodType } from "zod";
+import {
+  webmergeDeliveriesSchema,
+  webmergeDeliverySchema,
+  webmergeDocumentFileSchema,
+  webmergeDocumentSchema,
+  webmergeDocumentsSchema,
+  webmergeFieldsSchema,
+  webmergeFoldersSchema,
+  webmergeRouteRulesSchema,
+  webmergeRouteSchema,
+  webmergeRoutesSchema
+} from "./contracts.schema.js";
 import { CredentialsError, WebmergeApiError } from "./errors.js";
 import type {
   BinaryResponse,
@@ -45,53 +58,53 @@ export class WebmergeClient {
   }
 
   listDocuments(params: DocumentListParams = {}): Promise<WebmergeDocument[]> {
-    return this.requestJson<WebmergeDocument[]>("/api/documents", {
+    return this.requestJson("/api/documents", webmergeDocumentsSchema, {
       query: { search: params.search, folder: params.folder }
     });
   }
 
   listFolders(): Promise<WebmergeFolder[]> {
-    return this.requestJson<WebmergeFolder[]>("/api/folders");
+    return this.requestJson("/api/folders", webmergeFoldersSchema);
   }
 
   listDocumentFolders(): Promise<WebmergeFolder[]> {
-    return this.requestJson<WebmergeFolder[]>("/api/folders/documents");
+    return this.requestJson("/api/folders/documents", webmergeFoldersSchema);
   }
 
   getDocument(id: WebmergeId): Promise<WebmergeDocument> {
-    return this.requestJson<WebmergeDocument>(`/api/documents/${encodeURIComponent(String(id))}`);
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}`, webmergeDocumentSchema);
   }
 
   createDocument(payload: CreateDocumentRequest): Promise<WebmergeDocument> {
-    return this.requestJson<WebmergeDocument>("/api/documents", {
+    return this.requestJson("/api/documents", webmergeDocumentSchema, {
       method: "POST",
       body: payload
     });
   }
 
   updateDocument(id: WebmergeId, payload: UpdateDocumentRequest): Promise<WebmergeDocument> {
-    return this.requestJson<WebmergeDocument>(`/api/documents/${encodeURIComponent(String(id))}`, {
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}`, webmergeDocumentSchema, {
       method: "PUT",
       body: payload
     });
   }
 
   getDocumentFields(id: WebmergeId, params: DocumentFieldsParams = {}): Promise<WebmergeField[]> {
-    return this.requestJson<WebmergeField[]>(`/api/documents/${encodeURIComponent(String(id))}/fields`, {
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/fields`, webmergeFieldsSchema, {
       query: { attributes: params.attributes ? 1 : undefined }
     });
   }
 
   getDocumentFile(id: WebmergeId): Promise<WebmergeDocumentFile> {
-    return this.requestJson<WebmergeDocumentFile>(`/api/documents/${encodeURIComponent(String(id))}/file`);
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/file`, webmergeDocumentFileSchema);
   }
 
   getDocumentDeliveries(id: WebmergeId): Promise<WebmergeDelivery[]> {
-    return this.requestJson<WebmergeDelivery[]>(`/api/documents/${encodeURIComponent(String(id))}/deliveries`);
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
   createDocumentDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
-    return this.requestJson<WebmergeDelivery>(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, {
+    return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliverySchema, {
       method: "POST",
       body: payload
     });
@@ -102,8 +115,9 @@ export class WebmergeClient {
     deliveryId: WebmergeId,
     payload: DeliveryWriteRequest
   ): Promise<WebmergeDelivery> {
-    return this.requestJson<WebmergeDelivery>(
+    return this.requestJson(
       `/api/documents/${encodeURIComponent(String(documentId))}/deliveries/${encodeURIComponent(String(deliveryId))}`,
+      webmergeDeliverySchema,
       {
         method: "PUT",
         body: payload
@@ -112,35 +126,36 @@ export class WebmergeClient {
   }
 
   listRoutes(): Promise<WebmergeRoute[]> {
-    return this.requestJson<WebmergeRoute[]>("/api/routes");
+    return this.requestJson("/api/routes", webmergeRoutesSchema);
   }
 
   getRoute(id: WebmergeId): Promise<WebmergeRoute> {
-    return this.requestJson<WebmergeRoute>(`/api/routes/${encodeURIComponent(String(id))}`);
+    return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}`, webmergeRouteSchema);
   }
 
   getRouteFields(id: WebmergeId): Promise<WebmergeField[]> {
-    return this.requestJson<WebmergeField[]>(`/api/routes/${encodeURIComponent(String(id))}/fields`);
+    return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/fields`, webmergeFieldsSchema);
   }
 
   getRouteRules(id: WebmergeId): Promise<WebmergeRouteRule[]> {
-    return this.requestJson<WebmergeRouteRule[]>(`/api/routes/${encodeURIComponent(String(id))}/rules`);
+    return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/rules`, webmergeRouteRulesSchema);
   }
 
   getRouteDeliveries(id: WebmergeId): Promise<WebmergeDelivery[]> {
-    return this.requestJson<WebmergeDelivery[]>(`/api/routes/${encodeURIComponent(String(id))}/deliveries`);
+    return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
   createRouteDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
-    return this.requestJson<WebmergeDelivery>(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, {
+    return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliverySchema, {
       method: "POST",
       body: payload
     });
   }
 
   updateRouteDelivery(routeId: WebmergeId, deliveryId: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
-    return this.requestJson<WebmergeDelivery>(
+    return this.requestJson(
       `/api/routes/${encodeURIComponent(String(routeId))}/deliveries/${encodeURIComponent(String(deliveryId))}`,
+      webmergeDeliverySchema,
       {
         method: "PUT",
         body: payload
@@ -179,16 +194,26 @@ export class WebmergeClient {
     };
   }
 
-  private async requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  private async requestJson<T>(path: string, schema: ZodType<T>, options: RequestOptions = {}): Promise<T> {
     const response = await this.request(path, options);
     const contentType = response.headers.get("content-type") ?? "";
 
     if (!contentType.includes("application/json")) {
       const text = await response.text();
-      throw new WebmergeApiError("Expected a JSON response from Webmerge", response.status, text);
+      throw new WebmergeApiError("Expected a JSON response from Webmerge", 502, {
+        upstreamStatus: response.status,
+        body: text
+      });
     }
 
-    return (await response.json()) as T;
+    try {
+      return schema.parse(await response.json());
+    } catch (error) {
+      throw new WebmergeApiError("Webmerge returned an invalid JSON response", 502, {
+        upstreamStatus: response.status,
+        validation: error instanceof ZodError ? error.issues : String(error)
+      });
+    }
   }
 
   private async requestBinary(path: string, options: RequestOptions): Promise<BinaryResponse> {

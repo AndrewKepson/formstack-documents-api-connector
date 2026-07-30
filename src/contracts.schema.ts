@@ -6,7 +6,15 @@ import type {
   SingleFileToolRequest,
   SplitPdfRequest,
   UpdateDocumentRequest,
-  WebmergeFileInput
+  WebmergeDelivery,
+  WebmergeDocument,
+  WebmergeDocumentFile,
+  WebmergeField,
+  WebmergeFileInput,
+  WebmergeFolder,
+  WebmergeRoute,
+  WebmergeRouteCondition,
+  WebmergeRouteRule
 } from "./contracts.types.js";
 
 export const idSchema = z.union([z.string().min(1), z.number().int().positive()]);
@@ -97,3 +105,90 @@ export const fieldsQuerySchema = z.object({
     .optional()
     .transform((value) => value === "1" || value === "true")
 });
+
+const responseIdSchema = z.union([z.string().min(1), z.number()]).transform(String);
+
+export const webmergeFieldSchema: z.ZodType<WebmergeField> = z
+  .object({
+    key: z.string(),
+    name: z.string()
+  })
+  .passthrough();
+
+export const webmergeDocumentSchema: z.ZodType<WebmergeDocument> = z
+  .object({
+    id: responseIdSchema,
+    key: z.string(),
+    type: z.string(),
+    name: z.string(),
+    output: z.string(),
+    size: z.string().optional(),
+    size_width: z.string().optional(),
+    size_height: z.string().optional(),
+    active: z.string().optional(),
+    url: z.string(),
+    fields: z.array(webmergeFieldSchema).optional(),
+    html: z.string().optional()
+  })
+  .passthrough();
+
+export const webmergeFolderSchema: z.ZodType<WebmergeFolder> = z
+  .object({
+    id: responseIdSchema,
+    name: z.string(),
+    type: z.string(),
+    date: z.string().optional()
+  })
+  .passthrough();
+
+export const webmergeDocumentFileSchema: z.ZodType<WebmergeDocumentFile> = z.object({
+  type: z.string(),
+  last_update: z.string(),
+  contents: z.string()
+});
+
+export const webmergeDeliverySchema: z.ZodType<WebmergeDelivery> = z
+  .object({
+    id: responseIdSchema,
+    type: z.string(),
+    settings: z.record(z.string(), z.unknown()),
+    success: z.union([z.literal(0), z.literal(1), z.string()]).optional()
+  })
+  .passthrough();
+
+export const webmergeRouteConditionSchema: z.ZodType<WebmergeRouteCondition> = z.object({
+  field: z.string(),
+  exp: z.string(),
+  value: z.string()
+});
+
+export const webmergeRouteRuleSchema: z.ZodType<WebmergeRouteRule> = z
+  .object({
+    id: responseIdSchema.optional(),
+    document_id: responseIdSchema.optional(),
+    file: z.string().optional(),
+    sort: z.union([z.number(), z.string()]).optional(),
+    combine: z.union([z.literal(0), z.literal(1), z.string()]).optional(),
+    combine_docx: z.union([z.literal(0), z.literal(1), z.string()]).optional(),
+    loop_field: z.string().optional(),
+    conditions: z.array(webmergeRouteConditionSchema).optional()
+  })
+  .passthrough();
+
+export const webmergeRouteSchema: z.ZodType<WebmergeRoute> = z
+  .object({
+    id: responseIdSchema,
+    key: z.string(),
+    name: z.string(),
+    active: z.string().optional(),
+    url: z.string(),
+    rules: z.array(webmergeRouteRuleSchema).optional()
+  })
+  .passthrough();
+
+export const webmergeDocumentsSchema = z.array(webmergeDocumentSchema);
+export const webmergeFoldersSchema = z.array(webmergeFolderSchema);
+export const webmergeFieldsSchema = z.array(webmergeFieldSchema);
+export const webmergeDeliveriesSchema = z.array(webmergeDeliverySchema);
+export const webmergeRoutesSchema = z.array(webmergeRouteSchema);
+export const webmergeRouteRulesSchema = z.array(webmergeRouteRuleSchema);
