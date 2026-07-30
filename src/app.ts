@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { secureHeaders } from "hono/secure-headers";
 import { ZodError } from "zod";
 import { CredentialsError, WebmergeApiError } from "./errors.js";
@@ -35,6 +36,17 @@ export function createApp(options: CreateAppOptions = {}): ConnectorApp {
           status: 400,
           message: "Invalid request",
           details: error.issues
+        },
+        400
+      );
+    }
+
+    if ((error instanceof HTTPException && error.status === 400) || error instanceof SyntaxError) {
+      return context.json(
+        {
+          status: 400,
+          message: "Invalid request",
+          details: [{ code: "invalid_json", path: [], message: "Malformed JSON request body" }]
         },
         400
       );

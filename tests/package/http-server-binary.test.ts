@@ -34,6 +34,10 @@ function waitForServerPort(child: ChildProcessWithoutNullStreams): Promise<numbe
       clearTimeout(timeout);
       reject(new Error(`Server exited before startup (code ${code}, signal ${signal}). Output: ${output}`));
     });
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
   });
 }
 

@@ -29,6 +29,11 @@ const server = serve(
   }
 );
 
+server.on("error", (error) => {
+  console.error("Server error", error);
+  process.exitCode = 1;
+});
+
 let isShuttingDown = false;
 
 function shutdown(signal: NodeJS.Signals): void {
