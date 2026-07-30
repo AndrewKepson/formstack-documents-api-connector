@@ -20,7 +20,7 @@ import type {
   WebmergeId,
   WebmergeRoute,
   WebmergeRouteRule
-} from "./types.js";
+} from "./contracts.types.js";
 
 const DEFAULT_BASE_URL = "https://www.webmerge.me";
 

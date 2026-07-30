@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { WebmergeClient } from "../src/client.js";
-import { parseDeliveryWriteRequest } from "../src/deliveries.js";
-import type { DeliveryWriteRequest, WebmergeDelivery } from "../src/types.js";
+import {
+  parseDeliveryCreateRequest,
+  parseDeliveryUpdateRequest,
+  parseDeliveryWriteRequest
+} from "../src/deliveries.schema.js";
+import type { DeliveryWriteRequest, WebmergeDelivery } from "../src/contracts.types.js";
 
 type CapturedRequest = {
   url: string;
@@ -142,5 +146,23 @@ test("validates delivery write payloads at command boundaries", () => {
         url: "https://example.ngrok-free.app/webhooks/account-servicing/documents"
       }
     })
+  );
+
+  assert.throws(() =>
+    parseDeliveryCreateRequest({
+      type: "webhook",
+      settings: {}
+    })
+  );
+
+  assert.deepEqual(
+    parseDeliveryUpdateRequest({
+      type: "webhook",
+      settings: {}
+    }),
+    {
+      type: "webhook",
+      settings: {}
+    }
   );
 });

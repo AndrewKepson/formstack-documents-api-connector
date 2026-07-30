@@ -104,6 +104,12 @@ export interface DeliveryWriteRequest {
   [property: string]: unknown;
 }
 
+export interface DeliveryCreateRequest extends DeliveryWriteRequest {
+  settings: DeliveryWriteRequest["settings"] & {
+    url: string;
+  };
+}
+
 export interface WebmergeRoute {
   id: string;
   key: string;

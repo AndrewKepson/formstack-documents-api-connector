@@ -3,15 +3,20 @@ import "dotenv/config";
 import { readFile, writeFile } from "node:fs/promises";
 import { Command, Option } from "commander";
 import { WebmergeClient } from "./client.js";
-import { parseDeliveryWriteRequest } from "./deliveries.js";
+import {
+  combineFilesSchema,
+  documentCreateSchema,
+  documentUpdateSchema,
+  encryptPdfSchema,
+  singleFileToolSchema,
+  splitPdfSchema
+} from "./contracts.schema.js";
+import { parseDeliveryCreateRequest, parseDeliveryUpdateRequest } from "./deliveries.schema.js";
 import type {
   BinaryResponse,
-  CreateDocumentRequest,
-  DeliveryWriteRequest,
-  UpdateDocumentRequest,
   WebmergeClientOptions,
   WebmergeDocumentFile
-} from "./types.js";
+} from "./contracts.types.js";
 
 function clientFromOptions(options: Record<string, string | undefined>): WebmergeClient {
   const clientOptions: WebmergeClientOptions = {
@@ -37,17 +42,17 @@ async function writeBinary(result: BinaryResponse, output?: string): Promise<voi
   process.stdout.write(result.body);
 }
 
-function parseJson<T>(json: string): T {
-  return JSON.parse(json) as T;
+function parseJson(json: string): unknown {
+  return JSON.parse(json) as unknown;
 }
 
-async function readJsonPayload<T>(payload?: string, payloadFile?: string): Promise<T> {
+async function readJsonPayload(payload?: string, payloadFile?: string): Promise<unknown> {
   if ((payload && payloadFile) || (!payload && !payloadFile)) {
     throw new Error("Provide exactly one of --payload or --payload-file.");
   }
 
   const json = payloadFile ? await readFile(payloadFile, "utf8") : payload;
-  return parseJson<T>(json ?? "");
+  return parseJson(json ?? "");
 }
 
 async function writeDocumentFile(result: WebmergeDocumentFile, output?: string): Promise<void> {
@@ -123,7 +128,7 @@ documents
   .option("--payload <json>", "JSON create payload")
   .option("--payload-file <file>", "Read JSON create payload from a file")
   .action(async (options) => {
-    const payload = await readJsonPayload<CreateDocumentRequest>(options.payload, options.payloadFile);
+    const payload = documentCreateSchema.parse(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).createDocument(payload));
   });
 
@@ -134,7 +139,7 @@ documents
   .option("--payload <json>", "JSON update payload")
   .option("--payload-file <file>", "Read JSON update payload from a file")
   .action(async (id, options) => {
-    const payload = await readJsonPayload<UpdateDocumentRequest>(options.payload, options.payloadFile);
+    const payload = documentUpdateSchema.parse(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).updateDocument(id, payload));
   });
 
@@ -163,9 +168,7 @@ documentDeliveries
   .option("--payload <json>", "JSON delivery payload")
   .option("--payload-file <file>", "Read JSON delivery payload from a file")
   .action(async (id, options) => {
-    const payload = parseDeliveryWriteRequest(
-      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
-    );
+    const payload = parseDeliveryCreateRequest(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).createDocumentDelivery(id, payload));
   });
 
@@ -177,9 +180,7 @@ documentDeliveries
   .option("--payload <json>", "JSON delivery payload")
   .option("--payload-file <file>", "Read JSON delivery payload from a file")
   .action(async (documentId, deliveryId, options) => {
-    const payload = parseDeliveryWriteRequest(
-      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
-    );
+    const payload = parseDeliveryUpdateRequest(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).updateDocumentDelivery(documentId, deliveryId, payload));
   });
 
@@ -235,9 +236,7 @@ routeDeliveries
   .option("--payload <json>", "JSON delivery payload")
   .option("--payload-file <file>", "Read JSON delivery payload from a file")
   .action(async (id, options) => {
-    const payload = parseDeliveryWriteRequest(
-      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
-    );
+    const payload = parseDeliveryCreateRequest(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).createRouteDelivery(id, payload));
   });
 
@@ -249,9 +248,7 @@ routeDeliveries
   .option("--payload <json>", "JSON delivery payload")
   .option("--payload-file <file>", "Read JSON delivery payload from a file")
   .action(async (routeId, deliveryId, options) => {
-    const payload = parseDeliveryWriteRequest(
-      await readJsonPayload<DeliveryWriteRequest>(options.payload, options.payloadFile)
-    );
+    const payload = parseDeliveryUpdateRequest(await readJsonPayload(options.payload, options.payloadFile));
     printJson(await clientFromOptions(program.opts()).updateRouteDelivery(routeId, deliveryId, payload));
   });
 
@@ -262,7 +259,8 @@ tools
   .requiredOption("--payload <json>", "JSON payload with output and files")
   .option("--out <file>", "Write binary result to a file")
   .action(async (options) => {
-    const result = await clientFromOptions(program.opts()).combineFiles(parseJson(options.payload));
+    const payload = combineFilesSchema.parse(parseJson(options.payload));
+    const result = await clientFromOptions(program.opts()).combineFiles(payload);
     await writeBinary(result, options.out);
   });
 
@@ -271,7 +269,8 @@ tools
   .requiredOption("--payload <json>", "JSON payload with file")
   .option("--out <file>", "Write PDF result to a file")
   .action(async (options) => {
-    const result = await clientFromOptions(program.opts()).convertToPdf(parseJson(options.payload));
+    const payload = singleFileToolSchema.parse(parseJson(options.payload));
+    const result = await clientFromOptions(program.opts()).convertToPdf(payload);
     await writeBinary(result, options.out);
   });
 
@@ -280,7 +279,8 @@ tools
   .requiredOption("--payload <json>", "JSON payload with file")
   .option("--out <file>", "Write PDF result to a file")
   .action(async (options) => {
-    const result = await clientFromOptions(program.opts()).compressPdf(parseJson(options.payload));
+    const payload = singleFileToolSchema.parse(parseJson(options.payload));
+    const result = await clientFromOptions(program.opts()).compressPdf(payload);
     await writeBinary(result, options.out);
   });
 
@@ -289,7 +289,8 @@ tools
   .requiredOption("--payload <json>", "JSON payload with file, password, and optional permissions")
   .option("--out <file>", "Write PDF result to a file")
   .action(async (options) => {
-    const result = await clientFromOptions(program.opts()).encryptPdf(parseJson(options.payload));
+    const payload = encryptPdfSchema.parse(parseJson(options.payload));
+    const result = await clientFromOptions(program.opts()).encryptPdf(payload);
     await writeBinary(result, options.out);
   });
 
@@ -298,7 +299,8 @@ tools
   .requiredOption("--payload <json>", "JSON payload with file and optional extract/remove ranges")
   .option("--out <file>", "Write ZIP result to a file")
   .action(async (options) => {
-    const result = await clientFromOptions(program.opts()).splitPdf(parseJson(options.payload));
+    const payload = splitPdfSchema.parse(parseJson(options.payload));
+    const result = await clientFromOptions(program.opts()).splitPdf(payload);
     await writeBinary(result, options.out);
   });
 

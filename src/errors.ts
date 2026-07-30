@@ -1,4 +1,4 @@
-import type { ApiErrorBody } from "./types.js";
+import type { ApiErrorBody } from "./contracts.types.js";
 
 export class WebmergeApiError extends Error {
   readonly status: number;

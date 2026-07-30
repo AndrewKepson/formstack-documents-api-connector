@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import { CredentialsError } from "./errors.js";
-import type { WebmergeCredentials } from "./types.js";
+import type { WebmergeCredentials } from "./contracts.types.js";
 
 export interface CredentialResolutionOptions {
   allowEnvironmentFallback?: boolean;

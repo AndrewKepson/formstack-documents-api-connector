@@ -9,9 +9,9 @@ import {
   fieldsQuerySchema,
   singleFileToolSchema,
   splitPdfSchema
-} from "./schemas.js";
+} from "./contracts.schema.js";
 import { WebmergeClient } from "./client.js";
-import type { BinaryResponse } from "./types.js";
+import type { BinaryResponse } from "./contracts.types.js";
 
 export interface CreateAppOptions {
   allowEnvironmentCredentialFallback?: boolean;

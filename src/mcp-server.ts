@@ -2,19 +2,10 @@ import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { WebmergeClient } from "./client.js";
-import type { BinaryResponse } from "./types.js";
+import { fileInputSchema, idSchema, pdfPermissionSchema, toolOutputSchema } from "./contracts.schema.js";
+import type { BinaryResponse } from "./contracts.types.js";
 
-const idInput = z.union([z.string().min(1), z.number().int().positive()]);
-
-const fileInputSchema = z
-  .object({
-    name: z.string().min(1).describe("File name, including extension."),
-    url: z.string().url().optional().describe("Public URL for the file."),
-    contents: z.string().min(1).optional().describe("Base64-encoded file contents.")
-  })
-  .refine((file) => Boolean(file.url || file.contents), {
-    message: "Either url or contents is required"
-  });
+const idInput = idSchema;
 
 const verificationSchema = {
   confirmed: z
@@ -200,7 +191,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
       description:
         "Combine files into a PDF or DOCX. Requires explicit user verification because it sends file data to the API.",
       inputSchema: {
-        output: z.enum(["pdf", "docx"]),
+        output: toolOutputSchema,
         files: z.array(fileInputSchema).min(1),
         ...verificationSchema
       },
@@ -255,19 +246,7 @@ export function createMcpServer(options: CreateMcpServerOptions = {}): McpServer
         file: fileInputSchema,
         password: z.string().min(1),
         user_password: z.string().min(1).optional(),
-        permissions: z
-          .array(
-            z.enum([
-              "Printing",
-              "DegradedPrinting",
-              "ModifyContents",
-              "Assembly",
-              "CopyContents",
-              "FillIn",
-              "AllFeatures"
-            ])
-          )
-          .optional(),
+        permissions: z.array(pdfPermissionSchema).optional(),
         ...verificationSchema
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
