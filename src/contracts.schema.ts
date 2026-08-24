@@ -7,6 +7,7 @@ import type {
   SplitPdfRequest,
   UpdateDocumentRequest,
   WebmergeDelivery,
+  WebmergeDeliveryListItem,
   WebmergeDocument,
   WebmergeDocumentFieldMap,
   WebmergeDocumentFile,
@@ -107,6 +108,8 @@ export const fieldsQuerySchema = z.object({
     .transform((value) => value === "1" || value === "true")
 });
 
+export const documentMergePayloadSchema = z.record(z.string(), z.unknown());
+
 const responseIdSchema = z.union([z.string().min(1), z.number()]).transform(String);
 
 export const webmergeFieldSchema: z.ZodType<WebmergeField> = z
@@ -162,6 +165,15 @@ export const webmergeDeliverySchema: z.ZodType<WebmergeDelivery> = z
   })
   .passthrough();
 
+export const webmergeDeliveryListItemSchema: z.ZodType<WebmergeDeliveryListItem> = z
+  .object({
+    id: responseIdSchema,
+    type: z.string(),
+    settings: z.record(z.string(), z.unknown()).optional(),
+    success: z.union([z.literal(0), z.literal(1), z.string()]).optional()
+  })
+  .passthrough();
+
 export const webmergeRouteConditionSchema: z.ZodType<WebmergeRouteCondition> = z.object({
   field: z.string(),
   exp: z.string(),
@@ -195,6 +207,6 @@ export const webmergeRouteSchema: z.ZodType<WebmergeRoute> = z
 export const webmergeDocumentsSchema = z.array(webmergeDocumentSchema);
 export const webmergeFoldersSchema = z.array(webmergeFolderSchema);
 export const webmergeFieldsSchema = z.array(webmergeFieldSchema);
-export const webmergeDeliveriesSchema = z.array(webmergeDeliverySchema);
+export const webmergeDeliveriesSchema = z.array(webmergeDeliveryListItemSchema);
 export const webmergeRoutesSchema = z.array(webmergeRouteSchema);
 export const webmergeRouteRulesSchema = z.array(webmergeRouteRuleSchema);

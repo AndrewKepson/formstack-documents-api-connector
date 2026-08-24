@@ -6,6 +6,7 @@ import { WebmergeClient } from "./client.js";
 import {
   combineFilesSchema,
   documentCreateSchema,
+  documentMergePayloadSchema,
   documentUpdateSchema,
   encryptPdfSchema,
   singleFileToolSchema,
@@ -121,6 +122,23 @@ documents
   .action(async (id, options) => {
     const result = await clientFromOptions(program.opts()).getDocumentFile(id);
     await writeDocumentFile(result, options.out);
+  });
+
+documents
+  .command("merge")
+  .argument("<id>", "Document ID")
+  .description("Merge data into one document and download the result. Uses test mode unless --live is supplied.")
+  .option("--document-key <key>", "Document merge key; when omitted it is resolved from the authenticated API")
+  .option("--payload <json>", "JSON merge payload")
+  .option("--payload-file <file>", "Read JSON merge payload from a file")
+  .option("--out <file>", "Write the merged document to disk")
+  .option("--live", "Disable Formstack test mode")
+  .action(async (id, options) => {
+    const payload = documentMergePayloadSchema.parse(await readJsonPayload(options.payload, options.payloadFile));
+    const client = clientFromOptions(program.opts());
+    const documentKey = options.documentKey ?? (await client.getDocument(id)).key;
+    const result = await client.mergeDocument(id, documentKey, payload, { test: !options.live });
+    await writeBinary(result, options.out);
   });
 
 documents

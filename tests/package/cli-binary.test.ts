@@ -29,6 +29,17 @@ test("built CLI reports package version and command help", () => {
   assert.match(help.stdout, /tools/);
 });
 
+test("built CLI exposes document merge and validates its payload before authentication", () => {
+  const help = runCli(["documents", "merge", "--help"]);
+  const invalid = runCli(["documents", "merge", "123", "--document-key", "key", "--payload", "[]"]);
+
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /test mode/);
+  assert.match(help.stdout, /--live/);
+  assert.equal(invalid.status, 1);
+  assert.doesNotMatch(invalid.stderr, /Missing Formstack Documents API key or secret/);
+});
+
 test("CLI rejects invalid document writes before creating a client request", () => {
   const result = runCli(["documents", "create", "--payload", "{}"]);
 

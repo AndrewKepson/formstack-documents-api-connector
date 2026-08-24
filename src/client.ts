@@ -17,6 +17,8 @@ import type {
   CombineFilesRequest,
   CreateDocumentRequest,
   DeliveryWriteRequest,
+  DocumentMergeOptions,
+  DocumentMergePayload,
   DocumentFieldsParams,
   DocumentListParams,
   EncryptPdfRequest,
@@ -26,6 +28,7 @@ import type {
   WebmergeClientOptions,
   WebmergeCredentials,
   WebmergeDelivery,
+  WebmergeDeliveryListItem,
   WebmergeDocument,
   WebmergeDocumentFile,
   WebmergeField,
@@ -99,7 +102,27 @@ export class WebmergeClient {
     return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/file`, webmergeDocumentFileSchema);
   }
 
-  getDocumentDeliveries(id: WebmergeId): Promise<WebmergeDelivery[]> {
+  mergeDocument(
+    id: WebmergeId,
+    documentKey: string,
+    payload: DocumentMergePayload,
+    options: DocumentMergeOptions = {}
+  ): Promise<BinaryResponse> {
+    return this.requestBinary(
+      `/merge/${encodeURIComponent(String(id))}/${encodeURIComponent(documentKey)}`,
+      {
+        method: "POST",
+        query: {
+          download: 1,
+          test: options.test === false ? undefined : 1
+        },
+        body: payload,
+        authenticated: false
+      }
+    );
+  }
+
+  getDocumentDeliveries(id: WebmergeId): Promise<WebmergeDeliveryListItem[]> {
     return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
@@ -141,7 +164,7 @@ export class WebmergeClient {
     return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/rules`, webmergeRouteRulesSchema);
   }
 
-  getRouteDeliveries(id: WebmergeId): Promise<WebmergeDelivery[]> {
+  getRouteDeliveries(id: WebmergeId): Promise<WebmergeDeliveryListItem[]> {
     return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
@@ -237,7 +260,9 @@ export class WebmergeClient {
 
     const headers = new Headers();
     headers.set("Accept", "application/json, application/octet-stream;q=0.9, */*;q=0.8");
-    headers.set("Authorization", this.basicAuthHeader());
+    if (options.authenticated !== false) {
+      headers.set("Authorization", this.basicAuthHeader());
+    }
 
     let body: BodyInit | undefined;
     if (options.body !== undefined) {

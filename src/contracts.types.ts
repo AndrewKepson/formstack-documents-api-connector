@@ -55,6 +55,13 @@ export interface DocumentFieldsParams {
   attributes?: boolean | 0 | 1;
 }
 
+export type DocumentMergePayload = Record<string, unknown>;
+
+export interface DocumentMergeOptions {
+  /** Run the merge in Formstack's test mode. Defaults to true. */
+  test?: boolean;
+}
+
 export interface CreateDocumentRequest {
   name: string;
   type: DocumentType;
@@ -90,6 +97,18 @@ export interface WebmergeDelivery {
   id: string;
   type: string;
   settings: Record<string, unknown>;
+  success?: 0 | 1 | string;
+  [property: string]: unknown;
+}
+
+/**
+ * Formstack's delivery list response omits settings for some delivery types.
+ * Write responses retain the stricter WebmergeDelivery contract.
+ */
+export interface WebmergeDeliveryListItem {
+  id: string;
+  type: string;
+  settings?: Record<string, unknown>;
   success?: 0 | 1 | string;
   [property: string]: unknown;
 }

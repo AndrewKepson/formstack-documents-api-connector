@@ -1,5 +1,6 @@
 export { createApp, type ConnectorApp, type CreateAppOptions } from "./app.js";
 export { WebmergeClient, createWebmergeClient } from "./client.js";
+export { documentMergePayloadSchema } from "./contracts.schema.js";
 export {
   deliveryCreateSchema,
   deliveryUpdateSchema,

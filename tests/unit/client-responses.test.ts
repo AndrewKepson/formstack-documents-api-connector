@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   webmergeDeliverySchema,
+  webmergeDeliveryListItemSchema,
   webmergeDocumentFileSchema,
   webmergeDocumentSchema,
   webmergeFieldSchema,
@@ -36,6 +37,7 @@ test("validates each Formstack response family", () => {
     contents: "base64"
   });
   assert.equal(webmergeDeliverySchema.parse({ id: 3, type: "webhook", settings: {} }).id, "3");
+  assert.equal(webmergeDeliveryListItemSchema.parse({ id: 4, type: "docusign" }).id, "4");
   assert.equal(
     webmergeRouteSchema.parse({
       id: 4,
@@ -55,6 +57,7 @@ test("validates each Formstack response family", () => {
   assert.throws(() => webmergeFieldSchema.parse({ key: "field" }));
   assert.throws(() => webmergeDocumentFileSchema.parse({ type: "pdf", last_update: "today" }));
   assert.throws(() => webmergeDeliverySchema.parse({ id: "3", type: "webhook", settings: [] }));
+  assert.throws(() => webmergeDeliverySchema.parse({ id: "3", type: "webhook" }));
   assert.throws(() => webmergeRouteSchema.parse({ id: "4", name: "Route", url: "route" }));
   assert.throws(() => webmergeRouteRuleSchema.parse({ conditions: [{ exp: "==", value: "active" }] }));
 });
@@ -142,6 +145,35 @@ test("client rejects malformed JSON responses as upstream gateway errors", async
   );
 });
 
+test("client accepts delivery list items without settings while write responses stay strict", async () => {
+  const client = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: async (input, init) => {
+      const pathname = new URL(String(input)).pathname;
+      if (init?.method === "PUT") {
+        return new Response(JSON.stringify({ id: "delivery-1", type: "webhook" }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+
+      assert.equal(pathname, "/api/routes/route-1/deliveries");
+      return new Response(JSON.stringify([{ id: "delivery-1", type: "docusign" }]), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  assert.deepEqual(await client.getRouteDeliveries("route-1"), [{ id: "delivery-1", type: "docusign" }]);
+  await assert.rejects(
+    client.updateRouteDelivery("route-1", "delivery-1", { type: "webhook", settings: { url: "https://example.com" } }),
+    (error) => error instanceof WebmergeApiError && error.status === 502
+  );
+});
+
 test("client rejects non-JSON success responses as upstream gateway errors", async () => {
   const client = new WebmergeClient({
     apiKey: "test-key",
@@ -216,4 +248,45 @@ test("client preserves upstream API error status and details", async () => {
     assert.deepEqual(error.details, { error: "rate limited" });
     return true;
   });
+});
+
+test("client merges a document in test mode without API credentials or authorization", async () => {
+  const requests: Array<{ url: URL; init?: RequestInit }> = [];
+  const client = new WebmergeClient({
+    baseUrl: "https://www.webmerge.test",
+    fetch: async (input, init) => {
+      requests.push({ url: new URL(String(input)), init });
+      return new Response(Buffer.from("%PDF-test"), {
+        status: 200,
+        headers: { "content-type": "application/pdf" }
+      });
+    }
+  });
+
+  const result = await client.mergeDocument("123", "merge/key", { FirstName: "Ada" });
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0]?.url.pathname, "/merge/123/merge%2Fkey");
+  assert.equal(requests[0]?.url.searchParams.get("download"), "1");
+  assert.equal(requests[0]?.url.searchParams.get("test"), "1");
+  assert.equal(requests[0]?.init?.method, "POST");
+  assert.equal(new Headers(requests[0]?.init?.headers).has("authorization"), false);
+  assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), { FirstName: "Ada" });
+  assert.equal(result.body.toString(), "%PDF-test");
+});
+
+test("client omits the test query parameter only when live mode is explicit", async () => {
+  let requestUrl: URL | undefined;
+  const client = new WebmergeClient({
+    baseUrl: "https://www.webmerge.test",
+    fetch: async (input) => {
+      requestUrl = new URL(String(input));
+      return new Response(Buffer.from("result"), { status: 200 });
+    }
+  });
+
+  await client.mergeDocument("123", "key", {}, { test: false });
+
+  assert.equal(requestUrl?.searchParams.get("download"), "1");
+  assert.equal(requestUrl?.searchParams.has("test"), false);
 });

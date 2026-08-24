@@ -14,6 +14,11 @@ merge-triggering endpoints are intentionally not exposed by the Hono app yet.
 Selected write operations are available through the SDK and CLI so consuming
 projects can wrap them in project-local allowlists and confirmation steps.
 
+Document merges are test-mode by default in both the SDK and CLI. A consuming
+project should still verify the target document and its configured deliveries
+before calling the merge endpoint because Formstack can execute document-level
+deliveries during a merge.
+
 The MCP server follows the same boundary: it exposes no destructive account actions, and any non-read-only file-processing tool requires explicit user verification before the API call is made.
 
 ## Install
@@ -146,7 +151,19 @@ formstack-documents documents update 436346 \
 
 formstack-documents documents file 436346 \
   --out downloaded-template.pdf
+
+formstack-documents documents merge 436346 \
+  --document-key document-merge-key \
+  --payload-file merge-data.json \
+  --out test-merge.pdf
 ```
+
+`documents merge` includes `test=1` and `download=1` by default. Supplying the
+document key allows the public merge endpoint to be used without API
+credentials; when the key is omitted, the CLI resolves it through the
+authenticated document-detail endpoint. `--live` explicitly disables test
+mode. Account-specific wrappers should generally omit that option and add
+their own document allowlist and delivery checks.
 
 Create/update payloads can include PDF bytes as base64 `file_contents`:
 
