@@ -16,6 +16,7 @@ import type {
   BinaryResponse,
   CombineFilesRequest,
   CreateDocumentRequest,
+  DeliveryCreateRequest,
   DeliveryWriteRequest,
   DocumentMergeOptions,
   DocumentMergePayload,
@@ -126,7 +127,7 @@ export class WebmergeClient {
     return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
-  createDocumentDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
+  createDocumentDelivery(id: WebmergeId, payload: DeliveryCreateRequest): Promise<WebmergeDelivery> {
     return this.requestJson(`/api/documents/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliverySchema, {
       method: "POST",
       body: payload
@@ -168,7 +169,7 @@ export class WebmergeClient {
     return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliveriesSchema);
   }
 
-  createRouteDelivery(id: WebmergeId, payload: DeliveryWriteRequest): Promise<WebmergeDelivery> {
+  createRouteDelivery(id: WebmergeId, payload: DeliveryCreateRequest): Promise<WebmergeDelivery> {
     return this.requestJson(`/api/routes/${encodeURIComponent(String(id))}/deliveries`, webmergeDeliverySchema, {
       method: "POST",
       body: payload

@@ -113,7 +113,7 @@ export interface WebmergeDeliveryListItem {
   [property: string]: unknown;
 }
 
-export interface DeliveryWriteRequest {
+export interface WebhookDeliveryWriteRequest {
   type: "webhook";
   name?: string;
   active?: boolean | 0 | 1 | "0" | "1";
@@ -125,8 +125,22 @@ export interface DeliveryWriteRequest {
   [property: string]: unknown;
 }
 
-export interface DeliveryCreateRequest extends DeliveryWriteRequest {
-  settings: DeliveryWriteRequest["settings"] & {
+/** Existing DocuSign deliveries require their connected account id on update. */
+export interface DocuSignDeliveryUpdateRequest {
+  type: "docusign";
+  name?: string;
+  active?: boolean | 0 | 1 | "0" | "1";
+  notification_account_id: string;
+  settings: Record<string, unknown> & {
+    email_subject: string;
+  };
+  [property: string]: unknown;
+}
+
+export type DeliveryWriteRequest = WebhookDeliveryWriteRequest | DocuSignDeliveryUpdateRequest;
+
+export interface DeliveryCreateRequest extends WebhookDeliveryWriteRequest {
+  settings: WebhookDeliveryWriteRequest["settings"] & {
     url: string;
   };
 }

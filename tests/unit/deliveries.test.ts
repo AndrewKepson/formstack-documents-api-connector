@@ -6,7 +6,7 @@ import {
   parseDeliveryUpdateRequest,
   parseDeliveryWriteRequest
 } from "../../src/deliveries.schema.js";
-import type { DeliveryWriteRequest, WebmergeDelivery } from "../../src/contracts.types.js";
+import type { DeliveryCreateRequest, DeliveryWriteRequest, WebmergeDelivery } from "../../src/contracts.types.js";
 
 type CapturedRequest = {
   url: string;
@@ -85,7 +85,7 @@ test("creates and updates document and route webhook deliveries", async () => {
     baseUrl: "https://www.webmerge.test",
     fetch: fetchImpl
   });
-  const payload: DeliveryWriteRequest = {
+  const payload: DeliveryCreateRequest = {
     type: "webhook",
     name: "Local Documents Webhook",
     active: true,
@@ -121,6 +121,42 @@ test("creates and updates document and route webhook deliveries", async () => {
     [payload, payload, payload, payload]
   );
   assert.equal(requests[0]?.contentType, "application/json");
+});
+
+test("updates existing DocuSign deliveries without allowing DocuSign creation", async () => {
+  const { fetchImpl, requests } = createMockFetch();
+  const client = new WebmergeClient({
+    apiKey: "test-key",
+    apiSecret: "test-secret",
+    baseUrl: "https://www.webmerge.test",
+    fetch: fetchImpl
+  });
+  const payload: DeliveryWriteRequest = {
+    type: "docusign",
+    notification_account_id: "account-1",
+    settings: {
+      email_subject: "SIGNATURE REQUIRED - {$docusign_delivery_email_subject}",
+      recipients: "[]"
+    }
+  };
+
+  await client.updateRouteDelivery("route-1", "route-delivery-1", payload);
+
+  assert.deepEqual(requests.at(-1)?.body, payload);
+  assert.throws(() =>
+    parseDeliveryCreateRequest({
+      type: "docusign",
+      notification_account_id: "account-1",
+      settings: { email_subject: "subject" }
+    })
+  );
+  assert.throws(() =>
+    parseDeliveryUpdateRequest({
+      type: "docusign",
+      notification_account_id: "account-1",
+      settings: {}
+    })
+  );
 });
 
 test("validates delivery write payloads at command boundaries", () => {
@@ -163,6 +199,19 @@ test("validates delivery write payloads at command boundaries", () => {
     {
       type: "webhook",
       settings: {}
+    }
+  );
+
+  assert.deepEqual(
+    parseDeliveryUpdateRequest({
+      type: "docusign",
+      notification_account_id: "account-1",
+      settings: { email_subject: "subject" }
+    }),
+    {
+      type: "docusign",
+      notification_account_id: "account-1",
+      settings: { email_subject: "subject" }
     }
   );
 });

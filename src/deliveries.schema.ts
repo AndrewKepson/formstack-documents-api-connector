@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { DeliveryCreateRequest, DeliveryWriteRequest } from "./contracts.types.js";
+import type {
+  DeliveryCreateRequest,
+  DeliveryWriteRequest,
+  DocuSignDeliveryUpdateRequest,
+  WebhookDeliveryWriteRequest
+} from "./contracts.types.js";
 
 const activeSchema = z.union([z.boolean(), z.literal(0), z.literal(1), z.literal("0"), z.literal("1")]);
 
@@ -20,7 +25,7 @@ export const deliveryCreateSchema: z.ZodType<DeliveryCreateRequest> = z
   })
   .passthrough();
 
-export const deliveryUpdateSchema: z.ZodType<DeliveryWriteRequest> = z
+const webhookDeliveryUpdateSchema: z.ZodType<WebhookDeliveryWriteRequest> = z
   .object({
     type: z.literal("webhook"),
     name: z.string().min(1).optional(),
@@ -28,6 +33,25 @@ export const deliveryUpdateSchema: z.ZodType<DeliveryWriteRequest> = z
     settings: deliverySettingsSchema
   })
   .passthrough();
+
+const docusignDeliveryUpdateSchema: z.ZodType<DocuSignDeliveryUpdateRequest> = z
+  .object({
+    type: z.literal("docusign"),
+    name: z.string().min(1).optional(),
+    active: activeSchema.optional(),
+    notification_account_id: z.string().min(1),
+    settings: z
+      .object({
+        email_subject: z.string().min(1)
+      })
+      .passthrough()
+  })
+  .passthrough();
+
+export const deliveryUpdateSchema: z.ZodType<DeliveryWriteRequest> = z.union([
+  webhookDeliveryUpdateSchema,
+  docusignDeliveryUpdateSchema
+]);
 
 export const deliveryWriteSchema = deliveryUpdateSchema;
 
