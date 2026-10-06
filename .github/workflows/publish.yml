@@ -1,0 +1,123 @@
+name: Publish Package
+
+on:
+  workflow_run:
+    workflows: [Required CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: publish-package
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      package_name: ${{ steps.identity.outputs.package_name }}
+      package_version: ${{ steps.identity.outputs.package_version }}
+      dist_tag: ${{ steps.identity.outputs.dist_tag }}
+      should_publish: ${{ steps.identity.outputs.should_publish }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          package-manager-cache: false
+      - run: npm install --global npm@11.18.0
+      - name: Prepare read-only npm configuration
+        shell: bash
+        run: |
+          printf '%s\n' '@redrockswebdevelopment:registry=https://registry.npmjs.org/' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "${RUNNER_TEMP}/npm-readonly.npmrc"
+      - id: identity
+        name: Verify existing release identity and dependency pins
+        env:
+          EXPECTED_PACKAGE: "@redrockswebdevelopment/formstack-documents-api-connector"
+          NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
+        run: node .github/scripts/resolve-release.mjs
+
+  publish:
+    needs: resolve
+    if: needs.resolve.outputs.should_publish == 'true'
+    environment: npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: pnpm/action-setup@v4.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          package-manager-cache: false
+      - run: npm install --global npm@11.18.0
+      - name: Prepare separate read and publish configurations
+        shell: bash
+        run: |
+          printf '%s\n' '@redrockswebdevelopment:registry=https://registry.npmjs.org/' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "${RUNNER_TEMP}/npm-readonly.npmrc"
+          printf '%s\n' '@redrockswebdevelopment:registry=https://registry.npmjs.org/' > "${RUNNER_TEMP}/npm-publish.npmrc"
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
+          pnpm_config__auth: '{"https://registry.npmjs.org":{"@":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"},"@redrockswebdevelopment":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"}}}'
+        run: pnpm install --frozen-lockfile
+      - name: Check release candidate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
+          pnpm_config__auth: '{"https://registry.npmjs.org":{"@":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"},"@redrockswebdevelopment":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"}}}'
+        run: pnpm run prepublishOnly
+      - id: pack
+        name: Pack the verified release candidate
+        shell: bash
+        run: |
+          mkdir -p .release
+          npm pack --ignore-scripts --json --pack-destination .release > "${RUNNER_TEMP}/release-pack.json"
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const [packed] = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'release-pack.json'), 'utf8'));
+          if (!packed?.filename || packed.name !== process.env.PACKAGE_NAME || packed.version !== process.env.PACKAGE_VERSION) throw new Error('Unexpected packed package identity.');
+          appendFileSync(process.env.GITHUB_OUTPUT, `tarball=${join(process.env.GITHUB_WORKSPACE, '.release', packed.filename)}\n`);
+          NODE
+        env:
+          PACKAGE_NAME: ${{ needs.resolve.outputs.package_name }}
+          PACKAGE_VERSION: ${{ needs.resolve.outputs.package_version }}
+      - name: Publish through npm trusted publishing
+        working-directory: ${{ runner.temp }}
+        env:
+          DIST_TAG: ${{ needs.resolve.outputs.dist_tag }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          NODE_AUTH_TOKEN: ''
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-publish.npmrc
+        run: npm publish "$TARBALL" --access restricted --tag "$DIST_TAG"
+      - name: Verify published package visibility
+        shell: bash
+        env:
+          PACKAGE_NAME: ${{ needs.resolve.outputs.package_name }}
+          PACKAGE_VERSION: ${{ needs.resolve.outputs.package_version }}
+          NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
+        run: |
+          for attempt in {1..20}; do
+            published="$(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version 2>/dev/null || true)"
+            if [[ "$published" == "$PACKAGE_VERSION" ]]; then exit 0; fi
+            sleep 15
+          done
+          echo 'Published package could not be verified.' >&2
+          exit 1
