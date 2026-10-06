@@ -74,13 +74,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
           NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
-          pnpm_config_//registry.npmjs.org/:_authToken: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          pnpm_config__auth: '{"https://registry.npmjs.org":{"@":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"},"@redrockswebdevelopment":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"}}}'
         run: pnpm install --frozen-lockfile
       - name: Check release candidate
         env:
           NODE_AUTH_TOKEN: ${{ secrets.RRWD_NPM_READ_TOKEN }}
           NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-readonly.npmrc
-          pnpm_config_//registry.npmjs.org/:_authToken: ${{ secrets.RRWD_NPM_READ_TOKEN }}
+          pnpm_config__auth: '{"https://registry.npmjs.org":{"@":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"},"@redrockswebdevelopment":{"authToken":"${{ secrets.RRWD_NPM_READ_TOKEN }}"}}}'
         run: pnpm run prepublishOnly
       - id: pack
         name: Pack the verified release candidate
